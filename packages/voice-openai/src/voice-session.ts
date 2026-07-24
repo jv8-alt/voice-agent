@@ -24,6 +24,7 @@ export interface VoiceRealtimeTransport {
 
 export class OpenAIVoiceSession implements VoiceSession {
   private connected = false;
+  private lifecycle = 0;
   private activeMode: VoiceSessionMode | null = null;
   private readonly transcriptListeners = new Set<(event: VoiceTranscriptEvent) => void>();
   private readonly interruptedListeners = new Set<() => void>();
@@ -42,17 +43,28 @@ export class OpenAIVoiceSession implements VoiceSession {
   }
 
   async connect(input: ConnectVoiceSessionInput): Promise<void> {
-    await this.transport.connect(input.clientSecret);
+    const lifecycle = ++this.lifecycle;
+    this.connected = false;
+    try {
+      await this.transport.connect(input.clientSecret);
+    } catch (error) {
+      if (lifecycle !== this.lifecycle) {
+        return;
+      }
+      throw error;
+    }
+    if (lifecycle !== this.lifecycle) {
+      return;
+    }
     this.connected = true;
     this.transport.setInputMuted(true);
   }
 
   async disconnect(): Promise<void> {
-    if (this.connected) {
-      this.transport.close();
-    }
+    this.lifecycle += 1;
     this.connected = false;
     this.activeMode = null;
+    this.transport.close();
   }
 
   startTurn(mode: VoiceSessionMode): void {

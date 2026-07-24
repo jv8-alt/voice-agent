@@ -19,53 +19,100 @@ const transcriptCompletedSchema = z.object({
   transcript: z.string(),
 });
 
+export interface RealtimeSessionClient {
+  readonly transport: Pick<
+    RealtimeSession['transport'],
+    'requestResponse' | 'sendEvent' | 'updateSessionConfig'
+  >;
+  connect(options: { apiKey: string }): Promise<void>;
+  close(): void;
+  mute(muted: boolean): void;
+  sendMessage(message: string): void;
+  on(event: 'transport_event', listener: (event: TransportEvent) => void): unknown;
+  on(event: 'audio_interrupted', listener: () => void): unknown;
+}
+
+export type RealtimeSessionFactory = () => RealtimeSessionClient;
+
+function createRealtimeSession(): RealtimeSession {
+  const agent = new RealtimeAgent({
+    name: 'Voice outcome speaker',
+    instructions: 'Render only the exact text requested by the application. Do not add commentary.',
+  });
+  return new RealtimeSession(agent, {
+    transport: 'webrtc',
+    config: {
+      audio: {
+        input: {
+          transcription: { model: 'gpt-4o-mini-transcribe' },
+          turnDetection: null,
+        },
+      },
+    },
+  });
+}
+
 /**
  * Owns the OpenAI SDK objects and translates their raw events into the small
  * provider-neutral transport surface consumed by OpenAIVoiceSession.
  */
 export class OpenAIRealtimeTransport implements VoiceRealtimeTransport {
-  private readonly session: RealtimeSession;
+  private session: RealtimeSessionClient | null = null;
+  private generation = 0;
   private readonly transcriptListeners = new Set<(event: VoiceTranscriptEvent) => void>();
   private readonly interruptedListeners = new Set<() => void>();
   private readonly partialTranscripts = new Map<string, string>();
 
-  constructor() {
-    const agent = new RealtimeAgent({
-      name: 'Voice outcome speaker',
-      instructions: 'Render only the exact text requested by the application. Do not add commentary.',
-    });
-    this.session = new RealtimeSession(agent, {
-      transport: 'webrtc',
-      config: {
-        audio: {
-          input: {
-            transcription: { model: 'gpt-4o-mini-transcribe' },
-            turnDetection: null,
-          },
-        },
-      },
-    });
-    this.session.on('transport_event', (event) => this.handleTransportEvent(event));
-    this.session.on('audio_interrupted', () => {
-      this.interruptedListeners.forEach((listener) => listener());
-    });
-  }
+  constructor(private readonly sessionFactory: RealtimeSessionFactory = createRealtimeSession) {}
 
   async connect(clientSecret: string): Promise<void> {
-    await this.session.connect({ apiKey: clientSecret });
+    const generation = ++this.generation;
+    const previous = this.session;
+    this.session = null;
+    previous?.close();
+    this.partialTranscripts.clear();
+
+    const session = this.sessionFactory();
+    this.session = session;
+    session.on('transport_event', (event) => {
+      if (this.session === session) {
+        this.handleTransportEvent(event);
+      }
+    });
+    session.on('audio_interrupted', () => {
+      if (this.session === session) {
+        this.interruptedListeners.forEach((listener) => listener());
+      }
+    });
+
+    try {
+      await session.connect({ apiKey: clientSecret });
+    } catch (error) {
+      if (this.session === session) {
+        this.session = null;
+      }
+      session.close();
+      throw error;
+    }
+    if (generation !== this.generation || this.session !== session) {
+      session.close();
+    }
   }
 
   close(): void {
+    this.generation += 1;
+    const session = this.session;
+    this.session = null;
     this.partialTranscripts.clear();
-    this.session.close();
+    session?.close();
   }
 
   setInputMuted(muted: boolean): void {
-    this.session.mute(muted);
+    this.requireSession().mute(muted);
   }
 
   setTurnMode(mode: VoiceSessionMode): void {
-    this.session.transport.updateSessionConfig({
+    this.requireSession().transport.updateSessionConfig({
       audio: {
         input: {
           transcription: { model: 'gpt-4o-mini-transcribe' },
@@ -84,19 +131,20 @@ export class OpenAIRealtimeTransport implements VoiceRealtimeTransport {
   }
 
   commitInput(): void {
-    this.session.transport.sendEvent({ type: 'input_audio_buffer.commit' });
+    this.requireSession().transport.sendEvent({ type: 'input_audio_buffer.commit' });
   }
 
   speak(text: string): void {
+    const session = this.requireSession();
     const response = {
       output_modalities: ['audio'],
       instructions: `Speak exactly this application outcome, with no additions: ${JSON.stringify(text)}`,
     };
-    if (this.session.transport.requestResponse) {
-      this.session.transport.requestResponse(response);
+    if (session.transport.requestResponse) {
+      session.transport.requestResponse(response);
       return;
     }
-    this.session.sendMessage(text);
+    session.sendMessage(text);
   }
 
   onTranscript(listener: (event: VoiceTranscriptEvent) => void): () => void {
@@ -132,5 +180,12 @@ export class OpenAIRealtimeTransport implements VoiceRealtimeTransport {
 
   private emitTranscript(event: VoiceTranscriptEvent): void {
     this.transcriptListeners.forEach((listener) => listener(event));
+  }
+
+  private requireSession(): RealtimeSessionClient {
+    if (!this.session) {
+      throw new Error('Realtime voice transport is not connected');
+    }
+    return this.session;
   }
 }
