@@ -91,6 +91,32 @@ describe("task thread", () => {
     await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
   });
 
+  it("starts initial hands-free capture and submits the VAD-finalized transcript", async () => {
+    const voice = new TestVoice();
+    const ensureVoice = vi.fn(async () => true);
+    const submit = vi.fn();
+    render(
+      <TaskThread
+        envelope={envelope()}
+        voice={voice}
+        initialMode="handsfree"
+        ensureVoice={ensureVoice}
+        onSubmit={submit}
+        onCancel={() => {}}
+        onResolveApproval={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Listening hands-free" })).toBeInTheDocument();
+    await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("handsfree"));
+    voice.listener?.({ text: "List the repository files", final: true });
+
+    expect(submit).toHaveBeenCalledWith({
+      mode: "handsfree",
+      text: "List the repository files",
+    });
+  });
+
   it("does not start push-to-talk after release while voice is still connecting", async () => {
     const voice = new TestVoice();
     let finishConnection: ((ready: boolean) => void) | undefined;

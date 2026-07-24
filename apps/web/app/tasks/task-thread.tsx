@@ -8,7 +8,7 @@ import type {
   VoiceSessionMode,
 } from "@voice-agent/contracts";
 import Link from "next/link";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type SubmitTurn = (input: { mode: TurnMode; text: string }) => void | Promise<void>;
 
@@ -52,7 +52,7 @@ export function TaskThread({
   const pttHeldRef = useRef(false);
   const pttCapturingRef = useRef(false);
 
-  const beginVoiceCapture = (captureMode: VoiceSessionMode) => {
+  const beginVoiceCapture = useCallback((captureMode: VoiceSessionMode) => {
     captureModeRef.current = captureMode;
     const attempt = ++captureAttemptRef.current;
     const start = () => {
@@ -68,7 +68,7 @@ export function TaskThread({
     void ensureVoice().then((ready) => {
       if (ready) start();
     });
-  };
+  }, [ensureVoice, voice]);
 
   const endPushToTalk = () => {
     pttHeldRef.current = false;
@@ -85,6 +85,15 @@ export function TaskThread({
       void onSubmit({ mode: captureModeRef.current, text: text.trim() });
     }
   }), [onSubmit, voice]);
+
+  useEffect(() => {
+    if (initialMode !== "handsfree") return;
+    const timer = window.setTimeout(() => beginVoiceCapture("handsfree"), 0);
+    return () => {
+      window.clearTimeout(timer);
+      captureAttemptRef.current += 1;
+    };
+  }, [beginVoiceCapture, initialMode]);
 
   const approval = envelope.snapshot.pendingApproval;
   const latest = envelope.snapshot.turns.at(-1);
