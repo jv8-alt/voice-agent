@@ -11,10 +11,7 @@ export interface OpenAIOutcomeSummaryModelOptions {
   readonly model?: string;
 }
 
-/**
- * Agents SDK-backed summarizer. It receives counts and final state only:
- * raw messages, commands, paths, and tool output never enter the model prompt.
- */
+/** Agents SDK-backed summarizer for a concise, user-facing outcome. */
 export class OpenAIOutcomeSummaryModel implements OutcomeSummaryModel {
   private readonly agent: Agent<unknown, typeof OutcomeSummarySchema>;
 
@@ -23,8 +20,10 @@ export class OpenAIOutcomeSummaryModel implements OutcomeSummaryModel {
       name: 'Executive outcome presenter',
       model: options.model ?? 'gpt-4.1-mini',
       instructions:
-        'Write a calm, plain-language task outcome. Return one short headline and optional detail. ' +
-        'Do not invent filenames, commands, logs, tools, technical diagnostics, or private data.',
+        'Write a concrete, calm task outcome for the person who requested the work. ' +
+        'Lead with what changed or was fixed, and use the detail for verification or an important caveat. ' +
+        'Never report event, tool, or file counts as the outcome. Do not repeat raw logs, commands, ' +
+        'absolute paths, credentials, tokens, or other private data. Return one short headline and optional detail.',
       outputType: OutcomeSummarySchema,
     });
   }

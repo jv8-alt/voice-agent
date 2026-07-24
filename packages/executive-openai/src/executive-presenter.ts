@@ -15,6 +15,7 @@ export interface OutcomeSummaryRequest {
   readonly toolCount: number;
   readonly changedFileCount: number;
   readonly failedToolCount: number;
+  readonly outcome?: string;
 }
 
 export interface OutcomeSummary {
@@ -59,6 +60,17 @@ function eventFacts(events: readonly CodingEvent[]) {
   return { tools: [...tools], files: [...files], failedToolCount };
 }
 
+function outcomeCandidate(events: readonly CodingEvent[]): string | undefined {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.type === 'completed') {
+      const summary = event.summary.trim();
+      return summary ? summary.slice(0, 2_000) : undefined;
+    }
+  }
+  return undefined;
+}
+
 function privateStrings(events: readonly CodingEvent[]): string[] {
   const values: string[] = [];
   for (const event of events) {
@@ -98,12 +110,14 @@ export class OpenAIExecutivePresenter implements ExecutivePresenter {
 
   async summarizeOutcome(input: SummarizeOutcomeInput): Promise<SummarizeOutcomeResult> {
     const facts = eventFacts(input.events);
+    const outcome = outcomeCandidate(input.events);
     const generated = await this.model.summarize({
       status: input.status,
       eventCount: input.events.length,
       toolCount: facts.tools.length,
       changedFileCount: facts.files.length,
       failedToolCount: facts.failedToolCount,
+      ...(outcome === undefined ? {} : { outcome }),
     });
     const summary = containsPrivateText(generated, input.events)
       ? { headline: FALLBACK_HEADLINE[input.status] }

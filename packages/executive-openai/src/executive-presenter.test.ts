@@ -49,6 +49,31 @@ describe('OpenAIExecutivePresenter', () => {
     expect(JSON.stringify(model.requests)).not.toMatch(/RAW_LOG_TOKEN|secret-command|private_tool|private\/file/);
   });
 
+  it('gives the model the final outcome so the public update can describe the result', async () => {
+    const model = new FakeSummaryModel({
+      headline: 'Checkout retries now recover correctly',
+      detail: 'The targeted tests pass.',
+    });
+    const presenter = new OpenAIExecutivePresenter(model);
+    const result = await presenter.summarizeOutcome({
+      taskId: 'task-1',
+      turnId: 'turn-1',
+      status: 'completed',
+      events: [
+        {
+          type: 'completed',
+          summary: 'Implemented retry recovery for checkout and ran the targeted test suite successfully.',
+        },
+      ],
+    });
+
+    expect(model.requests[0]?.outcome).toContain('Implemented retry recovery');
+    expect(result.update).toMatchObject({
+      headline: 'Checkout retries now recover correctly',
+      detail: 'The targeted tests pass.',
+    });
+  });
+
   it('case-insensitively replaces a model response that repeats private event data', async () => {
     const model = new FakeSummaryModel({ headline: 'RAW TOOL OUTPUT', detail: 'raw_log_token=SK-PRIVATE-VALUE' });
     const presenter = new OpenAIExecutivePresenter(model);
