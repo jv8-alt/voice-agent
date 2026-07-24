@@ -7,6 +7,7 @@ import {
 } from '@openai/codex-sdk';
 import {
   dependencyUnavailableError,
+  internalError,
   invalidInputError,
   TaskError,
   type CodingAgent,
@@ -134,6 +135,16 @@ function itemSummary(event: Extract<ThreadEvent, { type: 'item.started' | 'item.
   }
 }
 
+function itemOk(item: Extract<ThreadEvent, { type: 'item.completed' }>['item']): boolean {
+  if ('status' in item && item.status === 'failed') {
+    return false;
+  }
+  if ('exit_code' in item && typeof item.exit_code === 'number' && item.exit_code !== 0) {
+    return false;
+  }
+  return true;
+}
+
 function dependencyFailure(message: string): CodingEvent {
   return {
     type: 'failed',
@@ -234,6 +245,7 @@ export class CodexCodingAgent implements CodingAgent {
     mode: 'plan' | 'execute',
   ): AsyncIterable<CodingEvent> {
     let finalResponse = '';
+    let sawFailedTool = false;
     try {
       const turn = await thread.runStreamed(
         prompt,
@@ -259,13 +271,22 @@ export class CodexCodingAgent implements CodingAgent {
           } else {
             const tool = itemTool(event);
             if (tool !== undefined) {
-              const ok = !('status' in event.item) || event.item.status !== 'failed';
+              const ok = itemOk(event.item);
+              if (!ok) {
+                sawFailedTool = true;
+              }
               yield { type: 'tool_finished', tool, summary: itemSummary(event), ok };
             }
           }
         } else if (event.type === 'turn.completed') {
           if (mode === 'plan') {
             yield { type: 'plan_ready', actions: parsePlan(finalResponse) };
+          } else if (sawFailedTool) {
+            yield {
+              type: 'failed',
+              error: internalError('Codex completed the turn with one or more failed tools.').toProblem(),
+            };
+            return;
           } else {
             yield { type: 'completed', summary: finalResponse || 'Codex completed the turn.' };
           }

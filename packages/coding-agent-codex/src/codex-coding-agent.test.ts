@@ -305,4 +305,83 @@ describe('CodexCodingAgent', () => {
     controller.abort();
     await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
   });
+
+  it('fails the run when a command finishes with status failed or a non-zero exit code', async () => {
+    async function* failedCommandEvents(): AsyncGenerator<ThreadEvent> {
+      yield {
+        type: 'item.completed',
+        item: {
+          id: 'command-failed',
+          type: 'command_execution',
+          command: 'npm test',
+          aggregated_output: 'fail',
+          exit_code: 1,
+          status: 'failed',
+        },
+      };
+      yield {
+        type: 'item.completed',
+        item: { id: 'message-failed', type: 'agent_message', text: 'Tests failed.' },
+      };
+      yield {
+        type: 'turn.completed',
+        usage: {
+          input_tokens: 1,
+          cached_input_tokens: 0,
+          cache_write_input_tokens: 0,
+          output_tokens: 1,
+          reasoning_output_tokens: 0,
+        },
+      };
+    }
+
+    async function* nonzeroExitEvents(): AsyncGenerator<ThreadEvent> {
+      yield {
+        type: 'item.completed',
+        item: {
+          id: 'command-nonzero',
+          type: 'command_execution',
+          command: 'npm test',
+          aggregated_output: 'fail',
+          exit_code: 2,
+          status: 'completed',
+        },
+      };
+      yield {
+        type: 'turn.completed',
+        usage: {
+          input_tokens: 1,
+          cached_input_tokens: 0,
+          cache_write_input_tokens: 0,
+          output_tokens: 1,
+          reasoning_output_tokens: 0,
+        },
+      };
+    }
+
+    for (const events of [failedCommandEvents, nonzeroExitEvents]) {
+      const client: CodexClient = {
+        startThread() {
+          throw new Error('unused');
+        },
+        resumeThread() {
+          return {
+            async runStreamed() {
+              return { events: events() };
+            },
+          };
+        },
+      };
+      const agent = new CodexCodingAgent({ client });
+      const collected = await collect(agent.run({ ...input(workspace), agentThreadId: 'thread-1' }));
+
+      expect(collected).toContainEqual(
+        expect.objectContaining({ type: 'tool_finished', tool: 'command', ok: false }),
+      );
+      expect(collected.at(-1)).toMatchObject({
+        type: 'failed',
+        error: { code: 'internal', retryable: false },
+      });
+    }
+  });
 });
