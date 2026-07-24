@@ -178,6 +178,31 @@ describe("mobile golden paths", () => {
     }));
   });
 
+  it("keeps the voice session connected when a new task transitions to its ID route", async () => {
+    const test = setup();
+    const view = render(
+      <TaskExperience
+        taskId="new"
+        initialMode="handsfree"
+        dependencies={test.dependencies}
+      />,
+    );
+    await waitFor(() =>
+      expect(test.voice.connect).toHaveBeenCalledWith({ clientSecret: "test-secret" }),
+    );
+
+    view.rerender(
+      <TaskExperience
+        taskId="task-1"
+        initialMode="handsfree"
+        dependencies={test.dependencies}
+      />,
+    );
+    await waitFor(() => expect(test.rest.get).toHaveBeenCalledWith("task-1"));
+
+    expect(test.voice.disconnect).not.toHaveBeenCalled();
+  });
+
   it("resolves a sensitive approval over the task socket", async () => {
     const test = setup(envelope("needs_input"));
     render(<TaskExperience taskId="task-1" initialMode="handsfree" dependencies={test.dependencies} />);

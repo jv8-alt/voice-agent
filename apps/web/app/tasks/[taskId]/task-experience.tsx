@@ -161,12 +161,17 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
       resolveSocketReady();
       unsubscribe();
       if (socketStarted) services.socket.close();
+    };
+  }, [services, taskId]);
+
+  useEffect(() => {
+    return () => {
       voiceGeneration.current += 1;
       voiceConnect.current = null;
       voiceReadyRef.current = false;
       void services.voice.disconnect();
     };
-  }, [services, taskId]);
+  }, [services.voice]);
 
   useEffect(() => {
     const update = state.envelope?.snapshot.updates.at(-1);
