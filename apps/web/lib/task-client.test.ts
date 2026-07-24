@@ -35,6 +35,25 @@ describe("task replay reducer", () => {
     expect(loaded.envelope?.lastEventId).toBe("9");
     expect(reduceTaskMessage(loaded, { type: "resync_required", taskId: "task-1" }).needsResync).toBe(true);
   });
+
+  it("derives task status from a newly created follow-up turn", () => {
+    const completed = reduceTaskMessage(initialTaskState, {
+      type: "task.snapshot", taskId: "task-1", lastEventId: "9",
+      snapshot: {
+        task: { id: "task-1", title: "Checkout", status: "completed", createdAt: now, updatedAt: now },
+        turns: [{ id: "turn-1", taskId: "task-1", mode: "ptt", text: "Fix checkout", status: "completed", createdAt: now, updatedAt: now }],
+        updates: [], pendingApproval: null,
+      },
+    });
+
+    const followedUp = reduceTaskMessage(completed, {
+      type: "turn.created", eventId: "10",
+      turn: { id: "turn-2", taskId: "task-1", mode: "typing", text: "Also add coverage", status: "queued", createdAt: now, updatedAt: now },
+    });
+
+    expect(followedUp.envelope?.snapshot.task.status).toBe("queued");
+    expect(followedUp.envelope?.snapshot.turns.map(({ status }) => status)).toEqual(["completed", "queued"]);
+  });
 });
 
 class TestSocket {
@@ -79,5 +98,25 @@ describe("task socket commands", () => {
     client.connect();
     sockets[2]?.open();
     expect(sockets[2]?.sent).toEqual([]);
+  });
+
+  it("closes and ignores the prior socket when reconnecting", () => {
+    const sockets: TestSocket[] = [];
+    const received: ServerMessage[] = [];
+    const client = new TaskSocketClient("ws://tasks", () => {
+      const socket = new TestSocket();
+      sockets.push(socket);
+      return socket;
+    });
+    client.subscribe((message) => received.push(message));
+
+    client.connect();
+    client.connect();
+    expect(sockets[0]?.readyState).toBe(3);
+
+    sockets[0]?.receive({ type: "connection.ready", connectionId: "stale" });
+    sockets[1]?.receive({ type: "connection.ready", connectionId: "current" });
+
+    expect(received).toEqual([{ type: "connection.ready", connectionId: "current" }]);
   });
 });
