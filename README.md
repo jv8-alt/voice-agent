@@ -99,6 +99,12 @@ transcript review step in the shared voice contract.
 - Workspace leases expose a local `rootPath` because the demo coding-agent
   adapter requires a directory. This is an intentional adapter seam, not a
   production sandbox guarantee.
+- Codex first inspects each lease in an offline, read-only sandbox and returns
+  normalized proposed actions. Approved runs and follow-ups resume that thread
+  with workspace-write access, still without network access; cancellation is
+  forwarded through the SDK's `AbortSignal`.
+- Codex adapter tests use an injected fake client and need no API key. Live
+  Codex execution is intentionally opt-in at application runtime.
 - Authentication is a fixed localhost demo identity.
 - Typing is a basic fallback; push-to-talk and hands-free are the primary paths.
 
