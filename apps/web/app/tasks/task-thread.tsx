@@ -81,7 +81,10 @@ export function TaskThread({
             {update.detail && <p>{update.detail}</p>}
           </article>
         ))}
-        {latest?.status === "working" && (
+        {latest?.status === "working" &&
+          !envelope.snapshot.updates.some(
+            (update) => update.turnId === latest.id && update.phase === "working",
+          ) && (
           <article className="agent-card working">
             <strong>Working on it</strong><div className="progress" />
           </article>
@@ -114,7 +117,13 @@ export function TaskThread({
           </form>
         ) : (
           <div className="voice-controls">
-            <button onClick={() => setMode("typing")} aria-label="Switch to typing">⌨</button>
+            <button
+              onClick={() => {
+                voice?.stopTurn();
+                setMode("typing");
+              }}
+              aria-label="Switch to typing"
+            >⌨</button>
             <button
               className="mic primary"
               onPointerDown={(event) => {
@@ -135,6 +144,7 @@ export function TaskThread({
                 const next = mode === "handsfree" ? "ptt" : "handsfree";
                 setMode(next);
                 if (next === "handsfree") beginVoiceCapture(next);
+                else voice?.stopTurn();
               }}
             >∞</button>
           </div>
