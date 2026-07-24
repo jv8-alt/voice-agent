@@ -1,6 +1,6 @@
 import type { CodingEvent } from '@voice-agent/contracts';
 import { runExecutivePresenterConformance } from '@voice-agent/contracts/conformance';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   OpenAIExecutivePresenter,
   type OutcomeSummary,
@@ -85,6 +85,23 @@ describe('OpenAIExecutivePresenter', () => {
     });
     expect(result.update).toMatchObject({ phase: 'completed', headline: 'Your task is complete' });
     expect(JSON.stringify(result.update)).not.toMatch(/raw_log_token|raw tool output/i);
+  });
+
+  it('keeps completed work completed when the summary model is unavailable', async () => {
+    const presenter = new OpenAIExecutivePresenter({
+      summarize: vi.fn().mockRejectedValue(new Error('Summary model unavailable')),
+    });
+    const result = await presenter.summarizeOutcome({
+      taskId: 'task-1',
+      turnId: 'turn-1',
+      status: 'completed',
+      events: [{ type: 'completed', summary: 'Answered the follow-up.' }],
+    });
+
+    expect(result.update).toMatchObject({
+      phase: 'completed',
+      headline: 'Your task is complete',
+    });
   });
 
   it('uses fixed, non-technical progress language', async () => {

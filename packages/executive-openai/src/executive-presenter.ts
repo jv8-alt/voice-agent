@@ -111,14 +111,19 @@ export class OpenAIExecutivePresenter implements ExecutivePresenter {
   async summarizeOutcome(input: SummarizeOutcomeInput): Promise<SummarizeOutcomeResult> {
     const facts = eventFacts(input.events);
     const outcome = outcomeCandidate(input.events);
-    const generated = await this.model.summarize({
-      status: input.status,
-      eventCount: input.events.length,
-      toolCount: facts.tools.length,
-      changedFileCount: facts.files.length,
-      failedToolCount: facts.failedToolCount,
-      ...(outcome === undefined ? {} : { outcome }),
-    });
+    let generated: OutcomeSummary;
+    try {
+      generated = await this.model.summarize({
+        status: input.status,
+        eventCount: input.events.length,
+        toolCount: facts.tools.length,
+        changedFileCount: facts.files.length,
+        failedToolCount: facts.failedToolCount,
+        ...(outcome === undefined ? {} : { outcome }),
+      });
+    } catch {
+      generated = { headline: FALLBACK_HEADLINE[input.status] };
+    }
     const summary = containsPrivateText(generated, input.events)
       ? { headline: FALLBACK_HEADLINE[input.status] }
       : generated;
