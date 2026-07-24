@@ -328,7 +328,7 @@ flowchart BT
 | F1 | done ([PR #13](https://github.com/jv8-alt/voice-agent/pull/13)) | Task orchestration convergence | Done when tests cover safe run, approve/reject, stale approval, cancel, resume, and failure | high | 400 |
 | F2 | done ([PR #14](https://github.com/jv8-alt/voice-agent/pull/14)) | REST/WebSocket/token route convergence | Done when a client creates, follows, cancels, and approves a task | high | 400 |
 | G1 | done ([PR #15](https://github.com/jv8-alt/voice-agent/pull/15)) | Real web/API/voice convergence | Done when mobile completes safe, cancelled, and approved-sensitive voice paths | high | 400 |
-| G2 | pending | Fixture E2E, startup script, README, production adapter map | Done when a fresh checkout runs all golden demo paths | medium | 350 |
+| G2 | done ([PR #16](https://github.com/jv8-alt/voice-agent/pull/16)) | Fixture E2E, startup script, README, production adapter map | Done when a fresh checkout runs all golden demo paths | medium | 350 |
 | G | pending | Accepted fixture-repository voice coding-agent demo | Done when all goal capabilities work and final checks pass | medium | 0 |
 
 ## Branch and agent boundaries
