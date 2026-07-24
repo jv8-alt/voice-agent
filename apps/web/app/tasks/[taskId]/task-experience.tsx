@@ -82,6 +82,17 @@ function voiceFailureMessage(cause: unknown): string {
   return "Voice needs microphone access. Allow the prompt, or type your request.";
 }
 
+async function microphonePermissionState(): Promise<PermissionState | "unsupported"> {
+  if (typeof navigator === "undefined" || !navigator.permissions?.query) return "unsupported";
+  try {
+    return (await navigator.permissions.query({
+      name: "microphone" as PermissionName,
+    })).state;
+  } catch {
+    return "unsupported";
+  }
+}
+
 export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperienceProps) {
   const router = useRouter();
   const services = useMemo(() => dependencies ?? defaultDependencies(), [dependencies]);
@@ -92,9 +103,7 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
   const [error, setError] = useState<string | null>(null);
   const [voiceReady, setVoiceReady] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
-  const [voiceHint, setVoiceHint] = useState<string | null>(
-    initialMode === "typing" ? null : "Allow microphone access to talk.",
-  );
+  const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const currentTaskId = useRef(taskId);
   const socketReady = useRef<Promise<void> | null>(null);
   const spokenUpdate = useRef<string | null>(null);
@@ -163,6 +172,26 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     voiceConnect.current = pending;
     return pending;
   }, [services.rest, services.voice]);
+
+  useEffect(() => {
+    if (initialMode === "typing") return;
+    let active = true;
+    void microphonePermissionState().then((permission) => {
+      if (!active) return;
+      if (permission === "granted") {
+        void enableVoice();
+      } else if (permission === "denied") {
+        setVoiceHint(
+          "Microphone permission is blocked. Allow it in the browser address bar, then try again.",
+        );
+      } else {
+        setVoiceHint("Allow microphone access to talk.");
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [enableVoice, initialMode]);
 
   const submit = async (turn: { mode: TurnMode; text: string }) => {
     try {

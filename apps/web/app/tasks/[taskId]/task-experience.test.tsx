@@ -112,6 +112,31 @@ describe("mobile golden paths", () => {
     expect(await screen.findByText("Greeting fixed")).toBeInTheDocument();
   });
 
+  it("connects automatically when microphone permission was already granted", async () => {
+    const originalPermissions = Object.getOwnPropertyDescriptor(navigator, "permissions");
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        query: vi.fn(async () => ({ state: "granted" }) as PermissionStatus),
+      },
+    });
+    try {
+      const test = setup();
+      render(<TaskExperience taskId="new" initialMode="ptt" dependencies={test.dependencies} />);
+
+      await waitFor(() =>
+        expect(test.voice.connect).toHaveBeenCalledWith({ clientSecret: "test-secret" }),
+      );
+      expect(screen.queryByRole("button", { name: "Allow microphone" })).not.toBeInTheDocument();
+    } finally {
+      if (originalPermissions) {
+        Object.defineProperty(navigator, "permissions", originalPermissions);
+      } else {
+        Reflect.deleteProperty(navigator, "permissions");
+      }
+    }
+  });
+
   it("explains blocked microphone permission and keeps typing available", async () => {
     const user = userEvent.setup();
     const test = setup();
