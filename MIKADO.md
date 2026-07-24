@@ -216,7 +216,7 @@ flowchart BT
 | ID | Status | Deliverable and files | Acceptance criterion | Risk | Est. size |
 | --- | --- | --- | --- | --- | --- |
 | T1 | in-progress | Revised plan, root README, and pnpm/TypeScript baseline | Done when documented setup and recursive lint, typecheck, test, and build commands succeed | low | 300 |
-| T2 | pending | `packages/contracts`: domain schemas, status machine, errors, eight ports | Done when invalid transitions and malformed adapter values are rejected | medium | 350 |
+| T2 | done | `packages/contracts`: domain schemas, status machine, errors, eight ports | Done when invalid transitions and malformed adapter values are rejected | medium | 350 |
 | T3 | pending | Contract transport schemas, OpenAPI, replay rules, conformance suites | Done when a fake system passes every success and pinned failure contract | high | 400 |
 | A1 | pending | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
 | A2 | pending | `apps/web`: thread, review sheet, voice controls, cancel/approval, basic typing | Done when component tests cover review, working, cancel, approval, and outcomes | medium | 400 |

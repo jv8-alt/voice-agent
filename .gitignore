@@ -4,6 +4,7 @@
 .next/
 coverage/
 dist/
+*.tsbuildinfo
 node_modules/
 .pnpm-store/
 playwright-report/
