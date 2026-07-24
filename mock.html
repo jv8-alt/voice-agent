@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Voice Agent — UX Mock</title>
+  <style>
+    :root {
+      --ink: #17201d;
+      --muted: #65706b;
+      --line: #dfe5e1;
+      --paper: #fbfcfa;
+      --surface: #ffffff;
+      --brand: #3559d9;
+      --brand-soft: #edf0ff;
+      --green: #17724b;
+      --green-soft: #e9f7ef;
+      --amber: #9a5b05;
+      --amber-soft: #fff4dc;
+      --shadow: 0 18px 50px rgba(20, 32, 28, .12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #edf0ed;
+      font: 15px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+    .app {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 720px);
+      width: min(1040px, 100%);
+      height: min(860px, 100dvh);
+      margin: max(0px, calc((100dvh - 860px) / 2)) auto;
+      overflow: hidden;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #f4f6f3;
+      padding: 28px 16px;
+      overflow-y: auto;
+    }
+    .sidebar-header, .thread-header, .composer-row, .card-title, .status-row {
+      display: flex;
+      align-items: center;
+    }
+    .sidebar-header { justify-content: space-between; padding: 0 8px 18px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 0; font-size: 24px; letter-spacing: -.03em; }
+    h2 { margin: 0; font-size: 17px; letter-spacing: -.015em; }
+    h3 { margin-bottom: 7px; font-size: 16px; }
+    .icon-button, .task, .mic, .mode-button, .send-button, .audio, .start-voice, .start-secondary {
+      border: 0;
+      cursor: pointer;
+    }
+    .icon-button {
+      width: 38px; height: 38px; border-radius: 12px;
+      background: var(--surface); font-size: 20px;
+    }
+    .start-card {
+      padding: 18px 14px; margin-bottom: 22px; border-radius: 18px;
+      background: var(--surface); box-shadow: 0 4px 18px rgba(20, 32, 28, .07);
+      text-align: center;
+    }
+    .start-card h2 { font-size: 20px; margin-bottom: 5px; }
+    .start-card p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+    .start-voice {
+      display: flex; width: 100%; min-height: 58px; align-items: center;
+      justify-content: center; gap: 9px; padding: 12px; border-radius: 99px;
+      background: var(--brand); color: white; font-weight: 750;
+      box-shadow: 0 7px 20px rgba(53, 89, 217, .22);
+    }
+    .start-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
+    .start-secondary {
+      min-height: 44px; border-radius: 12px; background: #f0f3f0; font-weight: 650;
+    }
+    .recent-heading {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 0 8px 7px;
+    }
+    .recent-heading h2 { font-size: 15px; }
+    .recent-heading span { color: var(--muted); font-size: 11px; }
+    .start-pulse {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      background: white; box-shadow: 0 0 0 5px rgba(255,255,255,.16);
+    }
+    .task {
+      display: block; width: 100%; text-align: left;
+      padding: 14px; margin: 6px 0; border-radius: 14px;
+      background: transparent;
+    }
+    .task:hover, .task.active { background: var(--surface); }
+    .task.active { box-shadow: 0 3px 12px rgba(20, 32, 28, .07); }
+    .task strong { display: block; margin-bottom: 5px; }
+    .task-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+    .dot { width: 7px; height: 7px; border-radius: 99px; display: inline-block; margin-right: 5px; }
+    .dot.working { background: var(--brand); }
+    .dot.needs-input { background: #d48009; }
+    .dot.completed { background: var(--green); }
+
+    .thread { display: flex; min-width: 0; flex-direction: column; background: var(--paper); }
+    .thread-header {
+      min-height: 74px; padding: 14px 22px; gap: 12px;
+      border-bottom: 1px solid var(--line); background: rgba(251, 252, 250, .94);
+    }
+    .back { display: none; }
+    .thread-heading { min-width: 0; flex: 1; }
+    .thread-heading h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .eyebrow { color: var(--muted); font-size: 12px; }
+    .sync { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .status {
+      padding: 5px 9px; border-radius: 99px; font-size: 12px; font-weight: 700;
+    }
+    .status.working { background: var(--brand-soft); color: var(--brand); }
+    .status.needs-input { background: var(--amber-soft); color: var(--amber); }
+    .status.completed { background: var(--green-soft); color: var(--green); }
+    .messages {
+      flex: 1; overflow-y: auto; padding: 24px max(18px, 6vw) 18px;
+      scroll-behavior: smooth;
+    }
+    .message { max-width: 560px; margin: 0 auto 16px; }
+    .message.user { display: flex; justify-content: flex-end; }
+    .bubble {
+      max-width: 84%; border-radius: 18px 18px 5px 18px;
+      background: var(--ink); color: white; padding: 13px 16px;
+    }
+    .card {
+      padding: 17px; border: 1px solid var(--line); border-radius: 16px;
+      background: var(--surface); box-shadow: 0 3px 14px rgba(20, 32, 28, .04);
+    }
+    .card + .card { margin-top: 10px; }
+    .card-title { justify-content: space-between; gap: 12px; }
+    .card-title h3 { margin: 0; }
+    .card p { color: #3e4a45; margin: 9px 0 0; }
+    .card.understood { border-left: 4px solid var(--brand); }
+    .card.outcome.completed { border-left: 4px solid var(--green); }
+    .card.outcome.needs-input { border-left: 4px solid #d48009; }
+    .mini-icon {
+      display: grid; place-items: center; width: 28px; height: 28px;
+      border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 800;
+    }
+    .outcome.completed .mini-icon { background: var(--green-soft); color: var(--green); }
+    .outcome.needs-input .mini-icon { background: var(--amber-soft); color: var(--amber); }
+    .progress {
+      height: 5px; margin-top: 15px; overflow: hidden;
+      border-radius: 99px; background: var(--brand-soft);
+    }
+    .progress::after {
+      content: ""; display: block; width: 58%; height: 100%;
+      border-radius: inherit; background: var(--brand);
+      animation: pulse 1.7s ease-in-out infinite alternate;
+    }
+    @keyframes pulse { to { width: 82%; opacity: .65; } }
+    details { margin-top: 13px; color: var(--muted); font-size: 13px; }
+    summary { cursor: pointer; font-weight: 650; }
+    details ul { padding-left: 20px; }
+    .evidence { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+    .evidence span { padding: 5px 8px; border-radius: 8px; background: #f1f4f1; font-size: 12px; }
+    .audio {
+      display: flex; align-items: center; gap: 10px; margin-top: 14px;
+      padding: 9px 12px; border-radius: 11px; background: #f3f5f3;
+    }
+    .wave { letter-spacing: -2px; color: var(--muted); }
+    .spacer-note { text-align: center; color: var(--muted); font-size: 12px; margin: 22px 0; }
+    .empty-start {
+      display: grid; min-height: 48vh; place-items: center;
+      color: var(--muted); text-align: center;
+    }
+    .empty-start h3 { color: var(--ink); margin-bottom: 4px; }
+
+    .composer {
+      position: relative; padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line); background: rgba(255,255,255,.96);
+    }
+    .composer-row { justify-content: center; gap: 10px; }
+    .mode-button {
+      min-width: 48px; height: 48px; border-radius: 14px;
+      background: #f0f3f0; font-size: 18px;
+    }
+    .mic {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      min-width: 178px; height: 52px; padding: 0 20px; border-radius: 99px;
+      background: var(--brand); color: white; font-weight: 750;
+      box-shadow: 0 7px 20px rgba(53, 89, 217, .25);
+      touch-action: none;
+    }
+    .mic.listening { background: #cc3944; transform: scale(1.02); }
+    .handsfree-on { background: var(--brand-soft); color: var(--brand); outline: 2px solid #cdd5ff; }
+    .composer-hint { margin: 7px 0 0; color: var(--muted); text-align: center; font-size: 11px; }
+    .typing {
+      display: none; gap: 9px; align-items: end; max-width: 620px; margin: 0 auto;
+    }
+    .typing.visible { display: flex; }
+    .typing textarea {
+      flex: 1; min-height: 50px; max-height: 120px; resize: vertical;
+      border: 1px solid var(--line); border-radius: 14px; padding: 13px;
+      outline: none; background: var(--surface);
+    }
+    .typing textarea:focus { border-color: var(--brand); }
+    .send-button {
+      height: 48px; padding: 0 18px; border-radius: 14px;
+      background: var(--brand); color: white; font-weight: 700;
+    }
+    .voice-row.hidden { display: none; }
+
+    .dictation {
+      display: none; position: absolute; left: 18px; right: 18px; bottom: calc(100% + 10px);
+      padding: 16px; border-radius: 16px; border: 1px solid var(--line);
+      background: var(--surface); box-shadow: var(--shadow);
+    }
+    .dictation.visible { display: block; }
+    .listening-label { color: #c2303c; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .transcript { min-height: 46px; margin: 9px 0 13px; font-size: 17px; }
+    .dictation-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .dictation-actions button { border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer; }
+    .dictation-actions .primary { background: var(--brand); color: white; }
+
+    .preview {
+      position: fixed; right: 14px; top: 14px; z-index: 5;
+      border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px;
+      background: var(--surface); color: var(--muted); font-size: 12px;
+    }
+    .empty { display: grid; place-items: center; height: 100%; text-align: center; color: var(--muted); }
+
+    @media (max-width: 720px) {
+      body { background: var(--paper); }
+      .app { display: block; height: 100dvh; margin: 0; box-shadow: none; }
+      .sidebar { height: 100%; border: 0; padding-top: max(22px, env(safe-area-inset-top)); }
+      .thread { display: none; height: 100%; }
+      .app.thread-open .sidebar { display: none; }
+      .app.thread-open .thread { display: flex; }
+      .back { display: grid; }
+      .thread-header { padding-top: max(14px, env(safe-area-inset-top)); }
+      .sync { display: none; }
+      .messages { padding-left: 16px; padding-right: 16px; }
+      .preview { top: auto; right: 10px; bottom: 94px; opacity: .8; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div>
+          <div class="eyebrow">VOICE AGENT</div>
+          <h1>Good morning</h1>
+        </div>
+        <button class="icon-button" aria-label="Account and sync">☁</button>
+      </div>
+      <section class="start-card">
+        <h2>What should I work on?</h2>
+        <p>Start speaking now, or type your request.</p>
+        <button class="start-voice" id="startPtt"><span class="start-pulse"></span> Push to talk</button>
+        <div class="start-options">
+          <button class="start-secondary" id="startHandsfree">∞ Hands-free</button>
+          <button class="start-secondary" id="startTyping">⌨ Type instead</button>
+        </div>
+      </section>
+      <div class="recent-heading"><h2>Recent tasks</h2><span>Synced</span></div>
+      <div id="taskList"></div>
+    </aside>
+
+    <section class="thread">
+      <header class="thread-header">
+        <button class="icon-button back" id="back" aria-label="Back to tasks">‹</button>
+        <div class="thread-heading">
+          <div class="eyebrow">TASK</div>
+          <h2 id="taskTitle"></h2>
+        </div>
+        <span class="sync">☁ Available on your devices</span>
+        <span class="status" id="taskStatus"></span>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+      <footer class="composer">
+        <section class="dictation" id="dictation" aria-live="polite">
+          <div class="listening-label" id="listeningLabel">Listening</div>
+          <div class="transcript" id="transcript">Also check whether this affected mobile users…</div>
+          <div class="dictation-actions">
+            <button id="cancelDictation">Cancel</button>
+            <button class="primary" id="useDictation">Review & send</button>
+          </div>
+        </section>
+
+        <div class="composer-row voice-row" id="voiceRow">
+          <button class="mode-button" id="typeMode" aria-label="Switch to typing">⌨</button>
+          <button class="mic" id="mic"><span>●</span><span id="micLabel">Hold to talk</span></button>
+          <button class="mode-button" id="handsfree" aria-label="Toggle hands-free">∞</button>
+        </div>
+        <div class="typing" id="typing">
+          <button class="mode-button" id="voiceMode" aria-label="Switch to voice">🎙</button>
+          <textarea id="typedPrompt" placeholder="Ask a follow-up…"></textarea>
+          <button class="send-button" id="sendTyped">Send</button>
+        </div>
+        <p class="composer-hint" id="composerHint">Hold the button while speaking · Hands-free is off</p>
+      </footer>
+    </section>
+  </main>
+
+  <select class="preview" id="preview" aria-label="Preview task state">
+    <option value="task">Preview current task</option>
+    <option value="working">Working state</option>
+    <option value="needs-input">Needs input state</option>
+    <option value="completed">Completed state</option>
+  </select>
+
+  <script>
+    const tasks = [
+      {
+        id: 1, title: "Fix checkout regression", status: "needs-input", time: "2m",
+        prompt: "Find why checkout conversion dropped after yesterday’s deploy.",
+        understood: "I’ll compare the deploy changes with checkout errors and identify the smallest safe fix.",
+        summary: "The retry change affects mobile Safari. I need your approval before rolling it back.",
+      },
+      {
+        id: 2, title: "Prepare Q3 launch brief", status: "working", time: "8m",
+        prompt: "Turn the launch notes into an executive brief for tomorrow.",
+        understood: "I’ll consolidate the source notes into a concise brief with decisions, risks, and next steps.",
+        summary: "The narrative is drafted. I’m reconciling two conflicting launch dates before finalizing it.",
+      },
+      {
+        id: 3, title: "Update analytics dashboard", status: "completed", time: "1h",
+        prompt: "Add weekly activation and retention trends to the leadership dashboard.",
+        understood: "I’ll add the two trends using the existing metric definitions and validate historical totals.",
+        summary: "The dashboard is updated. Activation and retention now show 12-week trends with validated totals.",
+      }
+    ];
+
+    const labels = { "working": "Working", "needs-input": "Needs your input", "completed": "Completed" };
+    let activeTask = tasks[0];
+    let handsfree = false;
+    let listening = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    function renderTasks() {
+      $("taskList").innerHTML = tasks.map(task => `
+        <button class="task ${task.id === activeTask.id ? "active" : ""}" data-task="${task.id}">
+          <strong>${task.title}</strong>
+          <div class="task-meta">
+            <span><i class="dot ${task.status}"></i>${labels[task.status]}</span>
+            <span>${task.time}</span>
+          </div>
+        </button>
+      `).join("");
+      document.querySelectorAll("[data-task]").forEach(button => {
+        button.onclick = () => {
+          activeTask = tasks.find(task => task.id === Number(button.dataset.task));
+          render();
+          $("app").classList.add("thread-open");
+        };
+      });
+    }
+
+    function agentCards(task, override) {
+      const status = override === "task" ? task.status : override;
+      const outcome = status === "completed" ? `
+        <div class="card outcome completed">
+          <div class="card-title"><h3>Completed</h3><span class="mini-icon">✓</span></div>
+          <p>${task.status === "completed" ? task.summary : "The targeted fix is deployed. Mobile conversion is returning to baseline with no desktop impact."}</p>
+          <div class="evidence"><span>✓ Tests passed</span><span>✓ Deploy healthy</span></div>
+          <button class="audio" id="audio"><span id="playIcon">▶</span><span class="wave">▂▅▃▆▂▇▃▅</span><span>0:18</span></button>
+        </div>` : status === "needs-input" ? `
+        <div class="card outcome needs-input">
+          <div class="card-title"><h3>I need your input</h3><span class="mini-icon">!</span></div>
+          <p>${task.status === "needs-input" ? task.summary : "The safest next step is a targeted rollback. Should I proceed?"}</p>
+          <div class="evidence"><span>Recommended: targeted rollback</span></div>
+        </div>` : `
+        <div class="card">
+          <div class="card-title"><h3>Working on it</h3><span class="status working">In progress</span></div>
+          <p>${task.status === "working" ? task.summary : "The drop is isolated to mobile Safari after the retry change. I’m validating a targeted fix."}</p>
+          <div class="progress"></div>
+          <details>
+            <summary>View 3 technical updates</summary>
+            <ul><li>Compared the latest deploy diff</li><li>Isolated browser-specific failures</li><li>Running checkout regression tests</li></ul>
+          </details>
+        </div>`;
+
+      return `
+        <div class="message">
+          <div class="card understood">
+            <div class="card-title"><h3>I understand the task</h3><span class="mini-icon">✓</span></div>
+            <p>${task.understood}</p>
+          </div>
+          ${outcome}
+        </div>`;
+    }
+
+    function renderThread(override = "task") {
+      const status = override === "task" ? activeTask.status : override;
+      $("taskTitle").textContent = activeTask.title;
+      $("taskStatus").className = `status ${status}`;
+      $("taskStatus").textContent = labels[status];
+      $("messages").innerHTML = activeTask.isDraft ? `
+        <div class="empty-start">
+          <div><h3>Start with your voice</h3><p>Your verified transcript will appear here.</p></div>
+        </div>
+      ` : `
+        <div class="spacer-note">Today · Task activity syncs across devices</div>
+        <div class="message user"><div class="bubble">${activeTask.prompt}</div></div>
+        ${agentCards(activeTask, override)}
+      `;
+      const audio = $("audio");
+      if (audio) audio.onclick = () => $("playIcon").textContent = $("playIcon").textContent === "▶" ? "❚❚" : "▶";
+    }
+
+    function render() {
+      renderTasks();
+      renderThread($("preview").value);
+    }
+
+    function showListening() {
+      listening = true;
+      $("dictation").classList.add("visible");
+      $("mic").classList.add("listening");
+      $("micLabel").textContent = handsfree ? "Listening…" : "Release to review";
+      $("listeningLabel").textContent = handsfree ? "Hands-free listening" : "Listening";
+    }
+
+    function stopListening() {
+      listening = false;
+      $("mic").classList.remove("listening");
+      $("micLabel").textContent = handsfree ? "Stop listening" : "Hold to talk";
+    }
+
+    $("mic").addEventListener("pointerdown", event => {
+      event.preventDefault();
+      if (handsfree) listening ? stopListening() : showListening();
+      else showListening();
+    });
+    $("mic").addEventListener("pointerup", () => { if (!handsfree) stopListening(); });
+    $("mic").addEventListener("pointerleave", () => { if (listening && !handsfree) stopListening(); });
+
+    $("handsfree").onclick = () => {
+      handsfree = !handsfree;
+      $("handsfree").classList.toggle("handsfree-on", handsfree);
+      $("composerHint").textContent = handsfree
+        ? "Hands-free is on · Pauses create a reviewable turn"
+        : "Hold the button while speaking · Hands-free is off";
+      $("micLabel").textContent = handsfree ? "Start listening" : "Hold to talk";
+      if (!handsfree) { stopListening(); $("dictation").classList.remove("visible"); }
+    };
+
+    $("cancelDictation").onclick = () => {
+      stopListening();
+      $("dictation").classList.remove("visible");
+    };
+
+    $("useDictation").onclick = () => {
+      $("typedPrompt").value = $("transcript").textContent.replace("…", "");
+      $("dictation").classList.remove("visible");
+      $("voiceRow").classList.add("hidden");
+      $("typing").classList.add("visible");
+      $("typedPrompt").focus();
+      stopListening();
+    };
+
+    $("typeMode").onclick = () => {
+      $("voiceRow").classList.add("hidden");
+      $("typing").classList.add("visible");
+      $("typedPrompt").focus();
+    };
+    $("voiceMode").onclick = () => {
+      $("typing").classList.remove("visible");
+      $("voiceRow").classList.remove("hidden");
+    };
+
+    $("sendTyped").onclick = () => {
+      const text = $("typedPrompt").value.trim();
+      if (!text) return;
+      if (activeTask.isDraft) {
+        activeTask.prompt = text.replaceAll("<", "&lt;");
+        activeTask.isDraft = false;
+        activeTask.understood = "I’ll inspect the relevant work, identify material risks, and return with a concise recommendation.";
+        activeTask.summary = "I’m gathering the relevant context and validating the highest-risk areas first.";
+        $("typedPrompt").value = "";
+        $("typing").classList.remove("visible");
+        $("voiceRow").classList.remove("hidden");
+        renderThread("working");
+        return;
+      }
+      const message = document.createElement("div");
+      message.className = "message user";
+      message.innerHTML = `<div class="bubble">${text.replaceAll("<", "&lt;")}</div>`;
+      $("messages").appendChild(message);
+      $("typedPrompt").value = "";
+      $("messages").scrollTop = $("messages").scrollHeight;
+      $("typing").classList.remove("visible");
+      $("voiceRow").classList.remove("hidden");
+    };
+
+    $("back").onclick = () => $("app").classList.remove("thread-open");
+    $("preview").onchange = () => renderThread($("preview").value);
+    function startTask(mode) {
+      activeTask = {
+        id: Math.max(...tasks.map(task => task.id)) + 1, title: "New task", status: "working", time: "now", isDraft: true,
+        prompt: "What would you like me to work on?",
+        understood: "Your next prompt will start this task.",
+        summary: "Waiting for your instructions."
+      };
+      tasks.unshift(activeTask);
+      render();
+      $("app").classList.add("thread-open");
+      if (mode === "typing") {
+        $("typeMode").click();
+      } else {
+        handsfree = mode === "handsfree";
+        $("handsfree").classList.toggle("handsfree-on", handsfree);
+        $("composerHint").textContent = handsfree
+          ? "Hands-free is on · Pauses create a reviewable turn"
+          : "Speak now · Release to review";
+        $("transcript").textContent = "Review the latest pull request and summarize any launch risks…";
+        showListening();
+      }
+    }
+
+    $("startPtt").onclick = () => startTask("ptt");
+    $("startHandsfree").onclick = () => startTask("handsfree");
+    $("startTyping").onclick = () => startTask("typing");
+
+    render();
+  </script>
+</body>
+</html>
