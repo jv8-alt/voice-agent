@@ -45,6 +45,7 @@ export class OpenAIVoiceSession implements VoiceSession {
   async connect(input: ConnectVoiceSessionInput): Promise<void> {
     const lifecycle = ++this.lifecycle;
     this.connected = false;
+    this.activeMode = null;
     try {
       await this.transport.connect(input.clientSecret);
     } catch (error) {
@@ -68,9 +69,9 @@ export class OpenAIVoiceSession implements VoiceSession {
   }
 
   startTurn(mode: VoiceSessionMode): void {
-    this.activeMode = mode;
     this.transport.setTurnMode(mode);
     this.transport.setInputMuted(false);
+    this.activeMode = mode;
   }
 
   stopTurn(): void {
