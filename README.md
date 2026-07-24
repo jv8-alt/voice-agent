@@ -7,9 +7,10 @@ repositories. The demo is being built from the interaction reference in
 
 ## Current status
 
-The repository currently contains the workspace foundation and interactive HTML
-mock. Next.js, Fastify, WebSocket orchestration, OpenAI voice, and Codex adapters
-will be added by the nodes listed in `MIKADO.md`.
+The repository currently contains the workspace foundation, interactive HTML
+mock, and the shared `@voice-agent/contracts` package. Next.js, Fastify,
+WebSocket orchestration, OpenAI voice, and Codex adapters will be added by the
+nodes listed in `MIKADO.md`.
 
 ## Prerequisites
 
@@ -63,6 +64,10 @@ The browser uses REST for task creation and snapshots, the Task WebSocket for
 agent events, cancellation, and sensitive-action approval, and OpenAI Realtime
 WebRTC for microphone input and spoken responses.
 
+Final push-to-talk transcripts are submitted immediately on release; final
+hands-free transcripts are submitted immediately after VAD silence. There is no
+transcript review step in the shared voice contract.
+
 ## Demo environment
 
 | Variable | Used by | Purpose |
@@ -77,12 +82,22 @@ WebRTC for microphone input and spoken responses.
 - Task and event state will initially be process-local and will not survive an
   API restart.
 - Coding tasks run only in disposable copies of bundled fixture repositories.
+- Workspace leases expose a local `rootPath` because the demo coding-agent
+  adapter requires a directory. This is an intentional adapter seam, not a
+  production sandbox guarantee.
 - Authentication is a fixed localhost demo identity.
 - Typing is a basic fallback; push-to-talk and hands-free are the primary paths.
 
 These constraints sit behind interfaces described in `MIKADO.md` so durable
 storage, production authentication, and sandboxed remote repositories can
 replace them without changing the browser contract.
+
+## Contract package imports
+
+Runtime code imports the production surface from `@voice-agent/contracts`.
+Adapter tests import reusable suites from `@voice-agent/contracts/conformance`
+and reference implementations from `@voice-agent/contracts/testing`; neither
+test-only surface is re-exported by the production barrel.
 
 ## Runbook maintenance
 

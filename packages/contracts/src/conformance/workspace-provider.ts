@@ -24,34 +24,34 @@ export function runWorkspaceProviderConformance(
     });
 
     it('acquires a lease with a non-empty leaseId and rootPath', async () => {
-      const lease = await provider.acquire({ taskId: 'task-1', fixtureId: 'checkout-regression' });
+      const lease = await provider.acquire({ taskId: 'task-1', workspaceId: 'demo-repo' });
       expect(lease.leaseId.length).toBeGreaterThan(0);
       expect(lease.rootPath.length).toBeGreaterThan(0);
     });
 
     it('gives distinct tasks distinct, non-overlapping leases', async () => {
-      const first = await provider.acquire({ taskId: 'task-1', fixtureId: 'checkout-regression' });
-      const second = await provider.acquire({ taskId: 'task-2', fixtureId: 'checkout-regression' });
+      const first = await provider.acquire({ taskId: 'task-1', workspaceId: 'demo-repo' });
+      const second = await provider.acquire({ taskId: 'task-2', workspaceId: 'demo-repo' });
 
       expect(first.leaseId).not.toBe(second.leaseId);
       expect(first.rootPath).not.toBe(second.rootPath);
     });
 
     it('release() does not throw for a lease it just acquired', async () => {
-      const lease = await provider.acquire({ taskId: 'task-1', fixtureId: 'checkout-regression' });
+      const lease = await provider.acquire({ taskId: 'task-1', workspaceId: 'demo-repo' });
       await expect(provider.release(lease.leaseId)).resolves.toBeUndefined();
     });
 
     it('release() is safe to call twice for the same lease (idempotent reclaim)', async () => {
-      const lease = await provider.acquire({ taskId: 'task-1', fixtureId: 'checkout-regression' });
+      const lease = await provider.acquire({ taskId: 'task-1', workspaceId: 'demo-repo' });
       await provider.release(lease.leaseId);
       await expect(provider.release(lease.leaseId)).resolves.toBeUndefined();
     });
 
-    it('rejects a fixtureId containing a path-traversal segment', async () => {
+    it('rejects a workspaceId containing a path-traversal segment', async () => {
       let caught: unknown;
       try {
-        await provider.acquire({ taskId: 'task-1', fixtureId: '../../etc' });
+        await provider.acquire({ taskId: 'task-1', workspaceId: '../../etc' });
       } catch (error) {
         caught = error;
       }
@@ -62,7 +62,7 @@ export function runWorkspaceProviderConformance(
     it('rejects a taskId containing a path-traversal segment', async () => {
       let caught: unknown;
       try {
-        await provider.acquire({ taskId: '../escape', fixtureId: 'checkout-regression' });
+        await provider.acquire({ taskId: '../escape', workspaceId: 'demo-repo' });
       } catch (error) {
         caught = error;
       }
@@ -71,7 +71,7 @@ export function runWorkspaceProviderConformance(
     });
 
     it('never returns a rootPath containing a ".." segment', async () => {
-      const lease = await provider.acquire({ taskId: 'task-1', fixtureId: 'checkout-regression' });
+      const lease = await provider.acquire({ taskId: 'task-1', workspaceId: 'demo-repo' });
       expect(lease.rootPath.split(/[/\\]/)).not.toContain('..');
     });
   });

@@ -33,7 +33,6 @@ describe('generateOpenApiDocument', () => {
     expect(createTask?.responses).toMatchObject({
       201: expect.anything(),
       400: expect.anything(),
-      422: expect.anything(),
       500: expect.anything(),
     });
 

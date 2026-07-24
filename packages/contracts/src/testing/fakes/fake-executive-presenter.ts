@@ -5,7 +5,7 @@ import type {
   SummarizeOutcomeResult,
   SummarizeProgressInput,
 } from '../../ports/executive-presenter.js';
-import type { TaskStatus } from '../../status.js';
+import type { TurnStatus } from '../../status.js';
 
 const STATUS_TO_PHASE = {
   queued: 'working',
@@ -14,7 +14,7 @@ const STATUS_TO_PHASE = {
   completed: 'completed',
   failed: 'failed',
   cancelled: 'cancelled',
-} as const satisfies Record<TaskStatus, ExecutiveUpdatePhase>;
+} as const satisfies Record<TurnStatus, ExecutiveUpdatePhase>;
 
 function toolNames(events: readonly CodingEvent[]): string[] {
   const names = new Set<string>();

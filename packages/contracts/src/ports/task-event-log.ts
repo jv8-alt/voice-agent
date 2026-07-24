@@ -1,13 +1,16 @@
-/**
- * One appended, ordered record. `payload` is intentionally opaque here;
- * T3 owns the wire event schemas that populate it.
- */
+import type { ReplayableServerMessage } from '../ws/server-messages.js';
+import type { ActorContext } from './actor-context.js';
+
 export interface TaskEventRecord {
   readonly id: string;
   readonly taskId: string;
   readonly createdAt: string;
-  readonly payload: unknown;
+  readonly message: ReplayableServerMessage;
 }
+
+export type EventLogReadResult =
+  | { readonly kind: 'replay'; readonly events: TaskEventRecord[] }
+  | { readonly kind: 'resync_required' };
 
 /**
  * Append-only, ordered event log used for WebSocket replay and resync.
@@ -18,15 +21,14 @@ export interface TaskEventRecord {
  * client or server restart can still resume from the last event ID.
  */
 export interface TaskEventLog {
-  append(taskId: string, payload: unknown): Promise<TaskEventRecord>;
+  append(context: ActorContext, taskId: string, message: ReplayableServerMessage): Promise<TaskEventRecord>;
 
   /**
-   * Returns events strictly after `afterEventId`, in order. `null` returns
-   * the full retained history. Implementations that cannot satisfy replay
-   * (e.g. the requested ID fell outside the retention window) reject so
-   * the caller can emit `resync_required`.
+   * Returns events strictly after `afterEventId`, in order. `null` is a fresh
+   * subscription and returns no replay because the caller sends an atomic
+   * snapshot. Unknown or evicted cursors return `resync_required`.
    */
-  listSince(taskId: string, afterEventId: string | null): Promise<TaskEventRecord[]>;
+  readSince(context: ActorContext, taskId: string, afterEventId: string | null): Promise<EventLogReadResult>;
 
-  latestEventId(taskId: string): Promise<string | null>;
+  latestEventId(context: ActorContext, taskId: string): Promise<string | null>;
 }

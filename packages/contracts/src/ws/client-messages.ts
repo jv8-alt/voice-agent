@@ -6,16 +6,13 @@ const taskId = () => z.string().min(1);
 const commandId = () => z.string().min(1);
 
 /**
- * Subscribes to a task's event stream. `afterEventId` omitted or `null`
- * requests a fresh subscription (a `task.snapshot` with no replay, per
- * `../replay/plan-replay.ts`); set it to resume after a previously seen
- * `eventId`.
+ * Subscribes after the cursor returned by the atomically loaded snapshot.
  */
 export const TaskSubscribeMessageSchema = z.object({
   type: z.literal('task.subscribe'),
   taskId: taskId(),
-  afterEventId: EventIdSchema.nullable().optional(),
-});
+  afterEventId: EventIdSchema.nullable(),
+}).strict();
 export type TaskSubscribeMessage = z.infer<typeof TaskSubscribeMessageSchema>;
 
 /** Requests cancellation of the task's active run. Idempotent via `commandId`. */
@@ -23,7 +20,7 @@ export const TaskCancelMessageSchema = z.object({
   type: z.literal('task.cancel'),
   taskId: taskId(),
   commandId: commandId(),
-});
+}).strict();
 export type TaskCancelMessage = z.infer<typeof TaskCancelMessageSchema>;
 
 /** Resolves a pending `approval.required`. Idempotent via `commandId`. */
@@ -33,7 +30,7 @@ export const ApprovalResolveMessageSchema = z.object({
   approvalId: z.string().min(1),
   decision: z.enum(['approve', 'reject']),
   commandId: commandId(),
-});
+}).strict();
 export type ApprovalResolveMessage = z.infer<typeof ApprovalResolveMessageSchema>;
 
 /**

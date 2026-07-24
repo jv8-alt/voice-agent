@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { TaskError } from './errors.js';
-import { canTransitionTaskStatus, isActiveTaskStatus, transitionTaskStatus } from './status.js';
+import { canTransitionTurnStatus, isActiveTurnStatus, transitionTurnStatus } from './status.js';
 
-describe('canTransitionTaskStatus', () => {
+describe('canTransitionTurnStatus', () => {
   it.each([
     ['queued', 'working'],
     ['working', 'needs_input'],
@@ -13,7 +13,7 @@ describe('canTransitionTaskStatus', () => {
     ['working', 'cancelled'],
     ['needs_input', 'cancelled'],
   ] as const)('allows %s -> %s', (from, to) => {
-    expect(canTransitionTaskStatus(from, to)).toBe(true);
+    expect(canTransitionTurnStatus(from, to)).toBe(true);
   });
 
   it.each([
@@ -25,19 +25,19 @@ describe('canTransitionTaskStatus', () => {
     ['queued', 'completed'],
     ['queued', 'needs_input'],
   ] as const)('rejects %s -> %s', (from, to) => {
-    expect(canTransitionTaskStatus(from, to)).toBe(false);
+    expect(canTransitionTurnStatus(from, to)).toBe(false);
   });
 });
 
-describe('transitionTaskStatus', () => {
+describe('transitionTurnStatus', () => {
   it('returns the destination status for a legal transition', () => {
-    expect(transitionTaskStatus('queued', 'working')).toBe('working');
+    expect(transitionTurnStatus('queued', 'working')).toBe('working');
   });
 
   it('throws a typed TaskError with code "conflict" for an illegal transition', () => {
     let caught: unknown;
     try {
-      transitionTaskStatus('completed', 'working', { requestId: 'req-1' });
+      transitionTurnStatus('completed', 'working', { requestId: 'req-1' });
     } catch (error) {
       caught = error;
     }
@@ -59,14 +59,14 @@ describe('transitionTaskStatus', () => {
 
   it('rejects cancelled -> anything', () => {
     for (const to of ['queued', 'working', 'needs_input', 'completed', 'failed', 'cancelled'] as const) {
-      expect(() => transitionTaskStatus('cancelled', to)).toThrow(TaskError);
+      expect(() => transitionTurnStatus('cancelled', to)).toThrow(TaskError);
     }
   });
 
   it('generates a requestId when none is supplied', () => {
     let caught: unknown;
     try {
-      transitionTaskStatus('failed', 'working');
+      transitionTurnStatus('failed', 'working');
     } catch (error) {
       caught = error;
     }
@@ -74,16 +74,16 @@ describe('transitionTaskStatus', () => {
   });
 });
 
-describe('isActiveTaskStatus', () => {
+describe('isActiveTurnStatus', () => {
   it('treats queued, working, and needs_input as active', () => {
-    expect(isActiveTaskStatus('queued')).toBe(true);
-    expect(isActiveTaskStatus('working')).toBe(true);
-    expect(isActiveTaskStatus('needs_input')).toBe(true);
+    expect(isActiveTurnStatus('queued')).toBe(true);
+    expect(isActiveTurnStatus('working')).toBe(true);
+    expect(isActiveTurnStatus('needs_input')).toBe(true);
   });
 
   it('treats completed, failed, and cancelled as inactive', () => {
-    expect(isActiveTaskStatus('completed')).toBe(false);
-    expect(isActiveTaskStatus('failed')).toBe(false);
-    expect(isActiveTaskStatus('cancelled')).toBe(false);
+    expect(isActiveTurnStatus('completed')).toBe(false);
+    expect(isActiveTurnStatus('failed')).toBe(false);
+    expect(isActiveTurnStatus('cancelled')).toBe(false);
   });
 });

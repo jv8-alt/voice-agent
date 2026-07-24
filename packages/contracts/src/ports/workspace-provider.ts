@@ -1,7 +1,6 @@
 /**
- * An opaque handle to a disposable, isolated copy of a fixture repository.
- * Deliberately minimal and technology-agnostic: it names a lease and a
- * root path, not a specific sandboxing mechanism.
+ * A handle to a disposable, isolated workspace. The lease identity is opaque;
+ * `rootPath` is the explicit local-demo seam required by the Codex adapter.
  */
 export interface WorkspaceLease {
   readonly leaseId: string;
@@ -10,17 +9,16 @@ export interface WorkspaceLease {
 
 export interface AcquireWorkspaceInput {
   readonly taskId: string;
-  readonly fixtureId: string;
+  readonly workspaceId: string;
 }
 
 /**
- * Provisions and reclaims isolated, disposable workspaces copied from
- * immutable fixture sources. Implementations are responsible for path
+ * Provisions and reclaims isolated, disposable workspaces. Implementations
+ * resolve the opaque workspace ID and are responsible for path
  * containment: no operation against a lease may escape its root.
  *
- * Demo adapter: local filesystem copy under an ignored `.workspaces/`
- * directory (`packages/workspace-fixture`). Production adapter: a
- * sandboxed container or ephemeral VM checkout of a remote repository.
+ * `rootPath` is an intentional demo adapter seam required by the local coding
+ * agent. A production adapter can map the same lease to a sandbox/container.
  */
 export interface WorkspaceProvider {
   acquire(input: AcquireWorkspaceInput): Promise<WorkspaceLease>;

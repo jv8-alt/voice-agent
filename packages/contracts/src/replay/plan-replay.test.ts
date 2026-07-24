@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { ServerMessage } from '../ws/server-messages.js';
+import type { ReplayableServerMessage } from '../ws/server-messages.js';
 import { planReplay, type ReplayableEvent } from './plan-replay.js';
 
 function statusChanged(eventId: string, taskId = 'task-1'): ReplayableEvent {
-  const message: ServerMessage = {
-    type: 'task.status_changed',
+  const message: ReplayableServerMessage = {
+    type: 'turn.status_changed',
     eventId,
     taskId,
+    turnId: 'turn-1',
     status: 'working',
   };
   return { eventId, message };
@@ -14,7 +15,7 @@ function statusChanged(eventId: string, taskId = 'task-1'): ReplayableEvent {
 
 const events: ReplayableEvent[] = [statusChanged('1'), statusChanged('2'), statusChanged('3')];
 
-function eventIdsOf(messages: ServerMessage[]): string[] {
+function eventIdsOf(messages: ReplayableServerMessage[]): string[] {
   return messages.map((message) => {
     if (!('eventId' in message)) {
       throw new Error(`Expected message to carry an eventId, got: ${JSON.stringify(message)}`);

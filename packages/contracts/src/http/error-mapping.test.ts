@@ -7,7 +7,6 @@ describe('mapTaskErrorCodeToHttpStatus', () => {
     ['invalid_input', 400],
     ['not_found', 404],
     ['conflict', 409],
-    ['unsupported_fixture', 422],
     ['dependency_unavailable', 503],
     ['internal', 500],
   ] as const)('maps %s to %i', (code, status) => {

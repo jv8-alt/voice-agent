@@ -1,5 +1,5 @@
 import type { CodingEvent, ExecutiveUpdate, TechnicalSummary } from '../domain.js';
-import type { TaskStatus } from '../status.js';
+import type { TurnStatus } from '../status.js';
 
 export interface SummarizeProgressInput {
   readonly taskId: string;
@@ -11,7 +11,7 @@ export interface SummarizeOutcomeInput {
   readonly taskId: string;
   readonly turnId: string;
   readonly events: readonly CodingEvent[];
-  readonly status: TaskStatus;
+  readonly status: TurnStatus;
 }
 
 export interface SummarizeOutcomeResult {

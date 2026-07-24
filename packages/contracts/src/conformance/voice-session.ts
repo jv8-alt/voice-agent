@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { VoiceSession } from '../ports/voice-session.js';
+import type { VoiceSession, VoiceTranscriptEvent } from '../ports/voice-session.js';
+
+export interface VoiceSessionConformanceDriver {
+  readonly session: VoiceSession;
+  emitTranscript(event: VoiceTranscriptEvent): void;
+  emitInterrupted(): void;
+}
 
 /**
  * Conformance suite for the browser-side {@link VoiceSession} port.
@@ -10,13 +16,15 @@ import type { VoiceSession } from '../ports/voice-session.js';
  * prior matching call (defensive UI code will do this on unmount).
  */
 export function runVoiceSessionConformance(
-  createSession: () => VoiceSession | Promise<VoiceSession>,
+  createDriver: () => VoiceSessionConformanceDriver | Promise<VoiceSessionConformanceDriver>,
 ): void {
   describe('VoiceSession conformance', () => {
+    let driver: VoiceSessionConformanceDriver;
     let session: VoiceSession;
 
     beforeEach(async () => {
-      session = await createSession();
+      driver = await createDriver();
+      session = driver.session;
     });
 
     it('connects without throwing given a client secret', async () => {
@@ -47,6 +55,33 @@ export function runVoiceSessionConformance(
     it('speak() resolves for a non-empty string', async () => {
       await session.connect({ clientSecret: 'secret-123' });
       await expect(session.speak('All done.')).resolves.toBeUndefined();
+    });
+
+    it('delivers the final PTT transcript after release for immediate submission', async () => {
+      await session.connect({ clientSecret: 'secret-123' });
+      const listener = vi.fn();
+      session.onTranscript(listener);
+      session.startTurn('ptt');
+      session.stopTurn();
+      driver.emitTranscript({ text: 'Fix checkout', final: true });
+      expect(listener).toHaveBeenCalledWith({ text: 'Fix checkout', final: true });
+    });
+
+    it('delivers a final hands-free transcript on VAD completion without stopTurn()', async () => {
+      await session.connect({ clientSecret: 'secret-123' });
+      const listener = vi.fn();
+      session.onTranscript(listener);
+      session.startTurn('handsfree');
+      driver.emitTranscript({ text: 'Run the tests', final: true });
+      expect(listener).toHaveBeenCalledWith({ text: 'Run the tests', final: true });
+    });
+
+    it('notifies subscribers when speech interrupts playback', async () => {
+      await session.connect({ clientSecret: 'secret-123' });
+      const listener = vi.fn();
+      session.onInterrupted(listener);
+      driver.emitInterrupted();
+      expect(listener).toHaveBeenCalledOnce();
     });
   });
 }

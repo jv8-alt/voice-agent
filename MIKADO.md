@@ -307,13 +307,13 @@ flowchart BT
 | T2 | done | `packages/contracts`: domain schemas, status machine, errors, eight ports | Done when invalid transitions and malformed adapter values are rejected | medium | 350 |
 | T3 | done ([PR #2](https://github.com/jv8-alt/voice-agent/pull/2)) | Initial transport schemas, OpenAPI, replay rules, and conformance suites | Done when the initial transport contract surface is available for red-team review | high | 400 |
 | T4 | done ([PR #3](https://github.com/jv8-alt/voice-agent/pull/3)) | Plan revision for reviewed domain, replay, voice, identity, and disclosure gaps; `MIKADO.md` only | Done when all replacement decisions, failure modes, architecture, flows, dependencies, boundaries, and acceptance criteria are approved | medium | 220 |
-| T5 | pending | `packages/contracts`: split `TaskRecord`/`TaskView`, status-bearing turns, approval/action views | Done when any terminal turn can be followed by a new queued turn without mutating prior turns | high | 360 |
-| T6 | pending | Actor-scoped task/snapshot store, workspace contract, approval records, command receipt port, safe errors | Done when wrong-actor access is `not_found`, approval state persists, and duplicate command behavior is deterministic | high | 390 |
-| T7 | pending | Replayable WebSocket union, typed event log, canonical event IDs, cursor policy, command correlation | Done when unknown or evicted cursors resync and non-replayable messages cannot enter the event log | high | 390 |
-| T8 | pending | HTTP snapshot envelope, required replay cursor, auto-submit voice contract, OpenAPI correction | Done when generated paths and every pinned response match revised schemas with no fixture vocabulary | high | 360 |
-| T9 | pending | Core port conformance and reference fakes | Done when actor isolation, follow-up, destructive risk, resume, mid-abort, voice finalization, approval, and dedupe suites pass | high | 400 |
-| T10 | pending | WebSocket, HTTP, replay, stale approval, and command integration contract tests | Done when the fake transport system passes every revised success and failure path | high | 400 |
-| T11 | pending | Production barrel cleanup, runbook contract notes, full contract verification | Done when recursive lint, typecheck, test, and build pass and downstream branches import only intended subpaths | low | 180 |
+| T5 | done (direct merge) | `packages/contracts`: split `TaskRecord`/`TaskView`, status-bearing turns, approval/action views | Done when any terminal turn can be followed by a new queued turn without mutating prior turns | high | 360 |
+| T6 | done (direct merge) | Actor-scoped task/snapshot store, workspace contract, approval records, command receipt port, safe errors | Done when wrong-actor access is `not_found`, approval state persists, and duplicate command behavior is deterministic | high | 390 |
+| T7 | done (direct merge) | Replayable WebSocket union, typed event log, canonical event IDs, cursor policy, command correlation | Done when unknown or evicted cursors resync and non-replayable messages cannot enter the event log | high | 390 |
+| T8 | done (direct merge) | HTTP snapshot envelope, required replay cursor, auto-submit voice contract, OpenAPI correction | Done when generated paths and every pinned response match revised schemas with no fixture vocabulary | high | 360 |
+| T9 | done (direct merge) | Core port conformance and reference fakes | Done when actor isolation, follow-up, destructive risk, resume, mid-abort, voice finalization, approval, and dedupe suites pass | high | 400 |
+| T10 | done (direct merge) | WebSocket, HTTP, replay, stale approval, and command integration contract tests | Done when the fake transport system passes every revised success and failure path | high | 400 |
+| T11 | done (direct merge) | Production barrel cleanup, runbook contract notes, full contract verification | Done when recursive lint, typecheck, test, and build pass and downstream branches import only intended subpaths | low | 180 |
 | A1 | pending | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
 | A2 | pending | `apps/web`: thread, auto-submit voice controls, cancel/approval, basic typing | Done when component tests cover immediate voice submission, working, cancel, approval, and outcomes | medium | 400 |
 | A3 | pending | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
@@ -363,6 +363,8 @@ flowchart BT
 - A node that changes setup, configuration, ports, commands, fixtures, or demo
   behavior updates `README.md`; stale run instructions fail acceptance.
 - Agents open PRs but do not merge or enable auto-merge. The user merges.
+- **Explicit exception:** on 2026-07-24 the user authorized T5-T11 to be
+  combined, committed, and merged directly to `main` without PRs.
 - Nodes may stack only within one branch and cannot merge ahead of their base.
 - If an attempted node reveals a prerequisite, revert the attempt, record the
   edge and reason here, recurse to a true leaf, and seek approval for any branch

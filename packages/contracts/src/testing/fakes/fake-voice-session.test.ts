@@ -2,7 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { runVoiceSessionConformance } from '../../conformance/voice-session.js';
 import { FakeVoiceSession } from './fake-voice-session.js';
 
-runVoiceSessionConformance(() => new FakeVoiceSession());
+runVoiceSessionConformance(() => {
+  const session = new FakeVoiceSession();
+  return {
+    session,
+    emitTranscript: (event) => session.emitTranscript(event),
+    emitInterrupted: () => session.emitInterrupted(),
+  };
+});
 
 describe('FakeVoiceSession (extra emission helpers)', () => {
   it('emitTranscript() delivers to subscribed listeners until unsubscribed', async () => {

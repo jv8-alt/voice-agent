@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   ApprovalRequestSchema,
+  ApprovalRecordSchema,
+  ActionViewSchema,
   CodingEventSchema,
   ExecutiveUpdateSchema,
   ProposedActionSchema,
-  TaskSchema,
+  SnapshotEnvelopeSchema,
+  TaskRecordSchema,
+  TaskViewSchema,
   TaskSnapshotSchema,
   TechnicalSummarySchema,
   TurnSchema,
@@ -12,14 +16,19 @@ import {
 
 const now = '2026-07-24T18:00:00.000Z';
 
-const validTask = {
+const validTaskRecord = {
   id: 'task-1',
   actorId: 'demo-user',
   workspaceId: 'workspace-1',
-  fixtureId: 'checkout-regression',
+  title: 'Fix the checkout bug',
+  agentThreadId: null,
+  createdAt: now,
+  updatedAt: now,
+};
+const validTaskView = {
+  id: 'task-1',
   title: 'Fix the checkout bug',
   status: 'working',
-  agentThreadId: null,
   createdAt: now,
   updatedAt: now,
 };
@@ -29,7 +38,9 @@ const validTurn = {
   taskId: 'task-1',
   mode: 'ptt',
   text: 'Fix the checkout bug',
+  status: 'working',
   createdAt: now,
+  updatedAt: now,
 };
 
 const validAction = {
@@ -51,7 +62,7 @@ const validApproval = {
   taskId: 'task-1',
   turnId: 'turn-1',
   reason: 'Destructive git operation requested',
-  actions: [validAction],
+  actions: [{ kind: 'write', summary: 'Edit checkout.ts' }],
   createdAt: now,
 };
 
@@ -64,22 +75,23 @@ const validTechnicalSummary = {
   createdAt: now,
 };
 
-describe('TaskSchema', () => {
-  it('accepts a valid task', () => {
-    expect(TaskSchema.safeParse(validTask).success).toBe(true);
+describe('task records and views', () => {
+  it('accepts internal records and browser-safe views', () => {
+    expect(TaskRecordSchema.safeParse(validTaskRecord).success).toBe(true);
+    expect(TaskViewSchema.safeParse(validTaskView).success).toBe(true);
   });
 
   it('rejects a task missing a required field', () => {
-    const { title: _title, ...withoutTitle } = validTask;
-    expect(TaskSchema.safeParse(withoutTitle).success).toBe(false);
+    const { title: _title, ...withoutTitle } = validTaskRecord;
+    expect(TaskRecordSchema.safeParse(withoutTitle).success).toBe(false);
   });
 
-  it('rejects an invalid status enum value', () => {
-    expect(TaskSchema.safeParse({ ...validTask, status: 'in_progress' }).success).toBe(false);
+  it('keeps internal identifiers out of public views', () => {
+    expect(TaskViewSchema.safeParse({ ...validTaskView, actorId: 'leak' }).success).toBe(false);
   });
 
   it('rejects the wrong type for createdAt', () => {
-    expect(TaskSchema.safeParse({ ...validTask, createdAt: 12345 }).success).toBe(false);
+    expect(TaskRecordSchema.safeParse({ ...validTaskRecord, createdAt: 12345 }).success).toBe(false);
   });
 });
 
@@ -148,6 +160,16 @@ describe('ApprovalRequestSchema', () => {
   it('rejects an empty actions array', () => {
     expect(ApprovalRequestSchema.safeParse({ ...validApproval, actions: [] }).success).toBe(false);
   });
+
+  it('separates internal actions from public action views', () => {
+    expect(ActionViewSchema.safeParse({ kind: 'write', summary: 'Edit a file', command: 'rm -rf /' }).success).toBe(false);
+    expect(ApprovalRecordSchema.safeParse({
+      ...validApproval,
+      actions: [validAction],
+      status: 'pending',
+      resolvedAt: null,
+    }).success).toBe(true);
+  });
 });
 
 describe('TechnicalSummarySchema', () => {
@@ -164,7 +186,7 @@ describe('TechnicalSummarySchema', () => {
 
 describe('TaskSnapshotSchema', () => {
   const validSnapshot = {
-    task: validTask,
+    task: validTaskView,
     turns: [validTurn],
     updates: [validUpdate],
     pendingApproval: null,
@@ -180,7 +202,11 @@ describe('TaskSnapshotSchema', () => {
 
   it('rejects a snapshot with a malformed nested task', () => {
     expect(
-      TaskSnapshotSchema.safeParse({ ...validSnapshot, task: { ...validTask, status: 'bogus' } }).success,
+      TaskSnapshotSchema.safeParse({ ...validSnapshot, task: { ...validTaskView, status: 'bogus' } }).success,
     ).toBe(false);
+  });
+
+  it('wraps snapshots with an atomic replay cursor', () => {
+    expect(SnapshotEnvelopeSchema.safeParse({ snapshot: validSnapshot, lastEventId: '42' }).success).toBe(true);
   });
 });

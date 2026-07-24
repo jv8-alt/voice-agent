@@ -3,27 +3,39 @@ import { z } from 'zod';
 
 /**
  * Domain-level failure categories pinned by MIKADO.md's frozen trunk
- * contracts. HTTP status mapping (400/404/409/422/503/500) is T3's
+ * contracts. HTTP status mapping (400/404/409/503/500) is the transport
  * responsibility, not part of this domain vocabulary.
  */
 export const TaskErrorCodeSchema = z.enum([
   'invalid_input',
   'not_found',
   'conflict',
-  'unsupported_fixture',
   'dependency_unavailable',
   'internal',
 ]);
 
 export type TaskErrorCode = z.infer<typeof TaskErrorCodeSchema>;
 
+export type JsonPrimitive = null | boolean | number | string;
+export type JsonSafeValue =
+  | JsonPrimitive
+  | JsonPrimitive[]
+  | { [key: string]: JsonPrimitive | JsonPrimitive[] };
+
+const JsonPrimitiveSchema = z.union([z.null(), z.boolean(), z.number().finite(), z.string()]);
+export const JsonSafeValueSchema: z.ZodType<JsonSafeValue> = z.union([
+  JsonPrimitiveSchema,
+  z.array(JsonPrimitiveSchema),
+  z.record(z.union([JsonPrimitiveSchema, z.array(JsonPrimitiveSchema)])),
+]);
+
 /** The single typed error shape used at every boundary in the system. */
 export const TaskErrorProblemSchema = z.object({
   code: TaskErrorCodeSchema,
-  message: z.string(),
+  message: z.string().min(1),
   retryable: z.boolean(),
-  requestId: z.string(),
-  details: z.unknown().optional(),
+  requestId: z.string().min(1),
+  details: JsonSafeValueSchema.optional(),
 });
 
 export type TaskErrorProblem = z.infer<typeof TaskErrorProblemSchema>;
@@ -31,7 +43,7 @@ export type TaskErrorProblem = z.infer<typeof TaskErrorProblemSchema>;
 export interface TaskErrorOptions {
   readonly requestId?: string;
   readonly retryable?: boolean;
-  readonly details?: unknown;
+  readonly details?: JsonSafeValue | undefined;
 }
 
 /**
@@ -43,7 +55,7 @@ export class TaskError extends Error implements TaskErrorProblem {
   readonly code: TaskErrorCode;
   readonly retryable: boolean;
   readonly requestId: string;
-  readonly details?: unknown;
+  readonly details?: JsonSafeValue | undefined;
 
   constructor(problem: TaskErrorProblem) {
     super(problem.message);
@@ -99,11 +111,6 @@ export function missingResourceError(message: string, options: TaskErrorOptions 
  */
 export function conflictError(message: string, options: TaskErrorOptions = {}): TaskError {
   return buildError('conflict', message, false, options);
-}
-
-/** Pinned category: the requested fixture repository is not supported. */
-export function unsupportedFixtureError(message: string, options: TaskErrorOptions = {}): TaskError {
-  return buildError('unsupported_fixture', message, false, options);
 }
 
 /** Pinned category: a required external dependency (Codex, OpenAI, workspace) is unavailable. */

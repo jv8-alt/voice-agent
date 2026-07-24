@@ -10,12 +10,13 @@ export {
   ResyncRequiredMessageSchema,
   ServerErrorMessageSchema,
   ServerMessageSchema,
+  ReplayableServerMessageSchema,
   TaskCancelledMessageSchema,
   TaskCompletedMessageSchema,
   TaskCreatedMessageSchema,
   TaskFailedMessageSchema,
   TaskSnapshotMessageSchema,
-  TaskStatusChangedMessageSchema,
+  TurnStatusChangedMessageSchema,
   TurnCreatedMessageSchema,
 } from './server-messages.js';
 export type {
@@ -27,12 +28,13 @@ export type {
   ResyncRequiredMessage,
   ServerErrorMessage,
   ServerMessage,
+  ReplayableServerMessage,
   TaskCancelledMessage,
   TaskCompletedMessage,
   TaskCreatedMessage,
   TaskFailedMessage,
   TaskSnapshotMessage,
-  TaskStatusChangedMessage,
+  TurnStatusChangedMessage,
   TurnCreatedMessage,
 } from './server-messages.js';
 

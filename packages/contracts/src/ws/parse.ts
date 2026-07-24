@@ -5,6 +5,10 @@ import { ServerMessageSchema, type ServerMessage } from './server-messages.js';
 
 export type ParseMessageResult<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: TaskError };
 
+function safeIssues(error: { issues: readonly { path: readonly (string | number)[]; message: string }[] }) {
+  return { issues: error.issues.map(({ path, message }) => `${path.join('.') || '<root>'}: ${message}`) };
+}
+
 /**
  * Parses raw (already-JSON-decoded) WebSocket input as a {@link ServerMessage}.
  * Never throws: malformed input returns `{ ok: false }` with an
@@ -20,7 +24,7 @@ export function parseServerMessage(input: unknown): ParseMessageResult<ServerMes
   }
   return {
     ok: false,
-    error: invalidInputError('Malformed server message.', { details: result.error.flatten() }),
+    error: invalidInputError('Malformed server message.', { details: safeIssues(result.error) }),
   };
 }
 
@@ -32,6 +36,6 @@ export function parseClientMessage(input: unknown): ParseMessageResult<ClientMes
   }
   return {
     ok: false,
-    error: invalidInputError('Malformed client message.', { details: result.error.flatten() }),
+    error: invalidInputError('Malformed client message.', { details: safeIssues(result.error) }),
   };
 }
