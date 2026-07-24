@@ -13,9 +13,12 @@ const DESTRUCTIVE_COMMANDS = [
   /\b(?:sudo|chmod\s+-R|chown\s+-R)\b/i,
 ];
 const CREDENTIAL_PATH = /(?:^|[/\\])(?:\.env(?:\.|$)|\.ssh|\.aws|\.config[/\\]gcloud|credentials?|secrets?)(?:[/\\]|$)/i;
-const SYSTEM_PATH = /^(?:\/(?:etc|usr|bin|sbin|var|System|Library)|[A-Za-z]:\\Windows)(?:[/\\]|$)/i;
+const SYSTEM_PATH =
+  /^(?:\/(?:etc|usr|bin|sbin|var|System|Library)|[A-Za-z]:\\Windows)(?:[/\\]|$)|(?:^|[/\\])(?:\.\.[/\\])+(?:etc|usr|bin|sbin|var|System|Library)(?:[/\\]|$)/i;
 const CREDENTIAL_COMMAND = /(?:^|[/\\\s"'=])(?:\.env(?:\.[^\s"'`]+)?|\.ssh|\.aws|\.config[/\\]gcloud|credentials?|secrets?)(?:[/\\\s"'`]|$)/i;
-const SYSTEM_COMMAND = /(?:^|[\s"'=])(?:\/(?:etc|usr|bin|sbin|var|System|Library)|[A-Za-z]:\\Windows)(?:[/\\\s"'`]|$)/i;
+const SYSTEM_COMMAND =
+  /(?:^|[\s"'=])(?:\/(?:etc|usr|bin|sbin|var|System|Library)|[A-Za-z]:\\Windows|(?:\.\.[/\\])+(?:etc|usr|bin|sbin|var|System|Library))(?:[/\\\s"'`]|$)/i;
+const NETWORK_COMMAND = /\b(?:curl|wget)\b/i;
 const DEPENDENCY_COMMAND = /\b(?:npm|pnpm|yarn)\s+(?:add|install|remove|update|upgrade)\b/i;
 const BROAD_DELETE = /\b(?:rm|del|rmdir)\b/i;
 
@@ -25,6 +28,7 @@ function riskReason(action: ProposedAction): string | null {
   if (action.paths?.some((path) => SYSTEM_PATH.test(path))) return 'The plan may change files outside the workspace.';
 
   const command = action.command ?? '';
+  if (NETWORK_COMMAND.test(command)) return 'The plan requests external network access.';
   if (CREDENTIAL_COMMAND.test(command)) return 'The plan may access credentials or secrets.';
   if (SYSTEM_COMMAND.test(command)) return 'The plan may change files outside the workspace.';
   if (DESTRUCTIVE_COMMANDS.some((pattern) => pattern.test(command))) return 'The plan includes a destructive system or repository command.';
