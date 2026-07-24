@@ -1,0 +1,36 @@
+import type { ProposedAction } from '@voice-agent/contracts';
+import { runActionRiskEvaluatorConformance } from '@voice-agent/contracts/conformance';
+import { describe, expect, it } from 'vitest';
+import { HeuristicActionRiskEvaluator } from './action-risk-evaluator.js';
+
+runActionRiskEvaluatorConformance(() => new HeuristicActionRiskEvaluator());
+
+describe('HeuristicActionRiskEvaluator', () => {
+  const evaluator = new HeuristicActionRiskEvaluator();
+
+  it.each([
+    ['hard reset', { kind: 'exec', summary: 'Reset', command: 'git reset --hard HEAD~1' }],
+    ['recursive delete', { kind: 'exec', summary: 'Clean', command: 'rm -rf ./src' }],
+    ['force push', { kind: 'exec', summary: 'Publish', command: 'git push origin main --force' }],
+    ['credential access', { kind: 'read', summary: 'Inspect config', paths: ['/home/user/.ssh/id_ed25519'] }],
+    ['system change', { kind: 'write', summary: 'Edit hosts', paths: ['/etc/hosts'] }],
+    ['dependency change', { kind: 'exec', summary: 'Install package', command: 'pnpm add left-pad' }],
+    ['network access', { kind: 'network', summary: 'Call a service' }],
+  ] satisfies [string, ProposedAction][])('marks %s as sensitive', async (_name, action) => {
+    const result = await evaluator.evaluate({ taskId: 'task-1', turnId: 'turn-1', actions: [action] });
+    expect(result.level).toBe('sensitive');
+    expect(result.reasons[0]).not.toContain(action.summary);
+  });
+
+  it('allows bounded workspace edits and non-destructive checks', async () => {
+    const result = await evaluator.evaluate({
+      taskId: 'task-1',
+      turnId: 'turn-1',
+      actions: [
+        { kind: 'write', summary: 'Update parser', paths: ['src/parser.ts'] },
+        { kind: 'exec', summary: 'Run tests', command: 'pnpm test' },
+      ],
+    });
+    expect(result).toEqual({ level: 'safe', reasons: [] });
+  });
+});
