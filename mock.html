@@ -216,10 +216,6 @@
     .dictation.visible { display: block; }
     .listening-label { color: #c2303c; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
     .transcript { min-height: 46px; margin: 9px 0 13px; font-size: 17px; }
-    .dictation-actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .dictation-actions button { border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer; }
-    .dictation-actions .primary { background: var(--brand); color: white; }
-
     .preview {
       position: fixed; right: 14px; top: 14px; z-index: 5;
       border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px;
@@ -282,10 +278,6 @@
         <section class="dictation" id="dictation" aria-live="polite">
           <div class="listening-label" id="listeningLabel">Listening</div>
           <div class="transcript" id="transcript">Also check whether this affected mobile users…</div>
-          <div class="dictation-actions">
-            <button id="cancelDictation">Cancel</button>
-            <button class="primary" id="useDictation">Review & send</button>
-          </div>
         </section>
 
         <div class="composer-row voice-row" id="voiceRow">
@@ -336,6 +328,7 @@
     let activeTask = tasks[0];
     let handsfree = false;
     let listening = false;
+    let handsfreeTimer;
 
     const $ = (id) => document.getElementById(id);
 
@@ -417,48 +410,63 @@
 
     function showListening() {
       listening = true;
+      clearTimeout(handsfreeTimer);
       $("dictation").classList.add("visible");
       $("mic").classList.add("listening");
-      $("micLabel").textContent = handsfree ? "Listening…" : "Release to review";
-      $("listeningLabel").textContent = handsfree ? "Hands-free listening" : "Listening";
+      $("micLabel").textContent = handsfree ? "Listening…" : "Release to send";
+      $("listeningLabel").textContent = handsfree ? "Listening · sends after a pause" : "Listening · release to send";
+      if (handsfree) handsfreeTimer = setTimeout(submitVoiceTurn, 1800);
     }
 
     function stopListening() {
       listening = false;
+      clearTimeout(handsfreeTimer);
       $("mic").classList.remove("listening");
-      $("micLabel").textContent = handsfree ? "Stop listening" : "Hold to talk";
+      $("micLabel").textContent = handsfree ? "Waiting for speech…" : "Hold to talk";
+    }
+
+    function submitVoiceTurn() {
+      if (!listening) return;
+      const text = $("transcript").textContent.replace("…", "").trim();
+      stopListening();
+      $("dictation").classList.remove("visible");
+      if (!text) return;
+
+      if (activeTask.isDraft) {
+        activeTask.prompt = text.replaceAll("<", "&lt;");
+        activeTask.isDraft = false;
+        activeTask.understood = "I’ll inspect the relevant work, identify material risks, and return with a concise recommendation.";
+        activeTask.summary = "I’m gathering the relevant context and validating the highest-risk areas first.";
+        render();
+        return;
+      }
+
+      const message = document.createElement("div");
+      message.className = "message user";
+      message.innerHTML = `<div class="bubble">${text.replaceAll("<", "&lt;")}</div>`;
+      $("messages").appendChild(message);
+      $("messages").scrollTop = $("messages").scrollHeight;
     }
 
     $("mic").addEventListener("pointerdown", event => {
       event.preventDefault();
-      if (handsfree) listening ? stopListening() : showListening();
-      else showListening();
+      if (handsfree) listening ? submitVoiceTurn() : showListening();
+      else {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        showListening();
+      }
     });
-    $("mic").addEventListener("pointerup", () => { if (!handsfree) stopListening(); });
-    $("mic").addEventListener("pointerleave", () => { if (listening && !handsfree) stopListening(); });
+    $("mic").addEventListener("pointerup", () => { if (!handsfree) submitVoiceTurn(); });
+    $("mic").addEventListener("pointercancel", () => { if (!handsfree) submitVoiceTurn(); });
 
     $("handsfree").onclick = () => {
+      if (listening) submitVoiceTurn();
       handsfree = !handsfree;
       $("handsfree").classList.toggle("handsfree-on", handsfree);
       $("composerHint").textContent = handsfree
-        ? "Hands-free is on · Pauses create a reviewable turn"
+        ? "Hands-free is on · Pauses send automatically"
         : "Hold the button while speaking · Hands-free is off";
-      $("micLabel").textContent = handsfree ? "Start listening" : "Hold to talk";
-      if (!handsfree) { stopListening(); $("dictation").classList.remove("visible"); }
-    };
-
-    $("cancelDictation").onclick = () => {
-      stopListening();
-      $("dictation").classList.remove("visible");
-    };
-
-    $("useDictation").onclick = () => {
-      $("typedPrompt").value = $("transcript").textContent.replace("…", "");
-      $("dictation").classList.remove("visible");
-      $("voiceRow").classList.add("hidden");
-      $("typing").classList.add("visible");
-      $("typedPrompt").focus();
-      stopListening();
+      $("micLabel").textContent = handsfree ? "Waiting for speech…" : "Hold to talk";
     };
 
     $("typeMode").onclick = () => {
@@ -513,14 +521,20 @@
         handsfree = mode === "handsfree";
         $("handsfree").classList.toggle("handsfree-on", handsfree);
         $("composerHint").textContent = handsfree
-          ? "Hands-free is on · Pauses create a reviewable turn"
-          : "Speak now · Release to review";
+          ? "Hands-free is on · Pauses send automatically"
+          : "Speak now · Release to send";
         $("transcript").textContent = "Review the latest pull request and summarize any launch risks…";
         showListening();
       }
     }
 
-    $("startPtt").onclick = () => startTask("ptt");
+    $("startPtt").addEventListener("pointerdown", event => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      startTask("ptt");
+    });
+    $("startPtt").addEventListener("pointerup", submitVoiceTurn);
+    $("startPtt").addEventListener("pointercancel", submitVoiceTurn);
     $("startHandsfree").onclick = () => startTask("handsfree");
     $("startTyping").onclick = () => startTask("typing");
 
