@@ -74,8 +74,8 @@ function privateStrings(events: readonly CodingEvent[]): string[] {
 }
 
 function containsPrivateText(summary: OutcomeSummary, events: readonly CodingEvent[]): boolean {
-  const publicText = `${summary.headline}\n${summary.detail ?? ''}`;
-  return privateStrings(events).some((value) => publicText.includes(value));
+  const publicText = `${summary.headline}\n${summary.detail ?? ''}`.toLowerCase();
+  return privateStrings(events).some((value) => publicText.includes(value.toLowerCase()));
 }
 
 export class OpenAIExecutivePresenter implements ExecutivePresenter {

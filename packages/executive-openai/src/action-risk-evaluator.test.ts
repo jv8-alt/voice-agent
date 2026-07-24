@@ -14,7 +14,11 @@ describe('HeuristicActionRiskEvaluator', () => {
     ['force push', { kind: 'exec', summary: 'Publish', command: 'git push origin main --force' }],
     ['credential access', { kind: 'read', summary: 'Inspect config', paths: ['/home/user/.ssh/id_ed25519'] }],
     ['system change', { kind: 'write', summary: 'Edit hosts', paths: ['/etc/hosts'] }],
+    ['credential command', { kind: 'exec', summary: 'Read key', command: 'cat ~/.ssh/id_ed25519' }],
+    ['environment command', { kind: 'exec', summary: 'Read environment', command: 'cat .env.production' }],
+    ['system-path command', { kind: 'exec', summary: 'Read hosts', command: 'cat /etc/hosts' }],
     ['dependency change', { kind: 'exec', summary: 'Install package', command: 'pnpm add left-pad' }],
+    ['single-path multi-delete', { kind: 'exec', summary: 'Delete outputs', command: 'rm one.log two.log', paths: ['one.log'] }],
     ['network access', { kind: 'network', summary: 'Call a service' }],
   ] satisfies [string, ProposedAction][])('marks %s as sensitive', async (_name, action) => {
     const result = await evaluator.evaluate({ taskId: 'task-1', turnId: 'turn-1', actions: [action] });

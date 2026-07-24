@@ -49,8 +49,8 @@ describe('OpenAIExecutivePresenter', () => {
     expect(JSON.stringify(model.requests)).not.toMatch(/RAW_LOG_TOKEN|secret-command|private_tool|private\/file/);
   });
 
-  it('replaces a model response that repeats private event data', async () => {
-    const model = new FakeSummaryModel({ headline: 'raw tool output', detail: 'RAW_LOG_TOKEN=sk-private-value' });
+  it('case-insensitively replaces a model response that repeats private event data', async () => {
+    const model = new FakeSummaryModel({ headline: 'RAW TOOL OUTPUT', detail: 'raw_log_token=SK-PRIVATE-VALUE' });
     const presenter = new OpenAIExecutivePresenter(model);
     const result = await presenter.summarizeOutcome({
       taskId: 'task-1',
@@ -59,7 +59,7 @@ describe('OpenAIExecutivePresenter', () => {
       events: privateEvents,
     });
     expect(result.update).toMatchObject({ phase: 'completed', headline: 'Your task is complete' });
-    expect(JSON.stringify(result.update)).not.toMatch(/RAW_LOG_TOKEN|raw tool output/);
+    expect(JSON.stringify(result.update)).not.toMatch(/raw_log_token|raw tool output/i);
   });
 
   it('uses fixed, non-technical progress language', async () => {
