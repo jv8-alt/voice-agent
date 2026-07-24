@@ -320,7 +320,7 @@ flowchart BT
 | A2 | done ([PR #7](https://github.com/jv8-alt/voice-agent/pull/7)) | `apps/web`: thread, auto-submit voice controls, cancel/approval, basic typing | Done when component tests cover immediate voice submission, working, cancel, approval, and outcomes | medium | 400 |
 | A3 | pending | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
 | B1 | done ([PR #8](https://github.com/jv8-alt/voice-agent/pull/8)) | `apps/task-api`: Fastify shell, config, errors, DI seams | Done when injection tests verify health and every pinned HTTP error | low | 300 |
-| B2 | pending | `packages/task-store-memory`: state, replay, active-run registry | Done when conformance covers overlap, replay, command retry, and abort cleanup | medium | 380 |
+| B2 | done ([PR #11](https://github.com/jv8-alt/voice-agent/pull/11)) | `packages/task-store-memory`: state, replay, active-run registry | Done when conformance covers overlap, replay, command retry, and abort cleanup | medium | 380 |
 | C1 | done ([PR #9](https://github.com/jv8-alt/voice-agent/pull/9)) | `fixtures` and `packages/workspace-fixture`: isolated fixture leases | Done when tests prove source immutability, task isolation, and path containment | high | 350 |
 | C2 | pending | `packages/coding-agent-codex`: plan/run/resume/abort adapter | Done when Codex plans read-only, resumes writes, tests fixture, and cancels cleanly | high | 400 |
 | D1 | done ([PR #5](https://github.com/jv8-alt/voice-agent/pull/5)) | `packages/voice-openai`: Realtime `VoiceSession` | Done when fake transport covers PTT, hands-free, interruption, and speech | high | 380 |
