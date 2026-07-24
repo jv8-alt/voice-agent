@@ -114,3 +114,12 @@ h1 { margin: 0; font-size: 26px; letter-spacing: -.03em; }
   margin: 0; padding: 10px 14px; transform: translateX(-50%);
   border-radius: 12px; background: #fff4dc; color: #7a4804; text-align: center;
 }
+.experience-error.voice-permission {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+}
+.experience-error.voice-permission p { margin: 0; }
+.experience-error.voice-permission button {
+  min-height: 36px; border: 0; border-radius: 10px; padding: 0 12px;
+  font: inherit; font-weight: 700; background: var(--brand); color: white; cursor: pointer;
+}
+.experience-error.voice-permission button:disabled { opacity: 0.7; cursor: wait; }

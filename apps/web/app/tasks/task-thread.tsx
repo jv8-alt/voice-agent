@@ -16,6 +16,8 @@ export interface TaskThreadProps {
   envelope: SnapshotEnvelope;
   voice?: VoiceSession;
   initialMode?: TurnMode;
+  /** Request microphone permission and connect voice before capture. */
+  ensureVoice?: () => Promise<boolean>;
   onSubmit?: SubmitTurn;
   onCancel?: () => void;
   onResolveApproval?: (approval: ApprovalRequest, decision: "approve" | "reject") => void;
@@ -34,6 +36,7 @@ export function TaskThread({
   envelope,
   voice,
   initialMode = "ptt",
+  ensureVoice,
   onSubmit = () => {},
   onCancel = () => {},
   onResolveApproval = () => {},
@@ -47,7 +50,10 @@ export function TaskThread({
 
   const beginVoiceCapture = (captureMode: VoiceSessionMode) => {
     captureModeRef.current = captureMode;
-    voice?.startTurn(captureMode);
+    void (async () => {
+      if (ensureVoice && !(await ensureVoice())) return;
+      voice?.startTurn(captureMode);
+    })();
   };
 
   useEffect(() => voice?.onTranscript(({ final, text }) => {

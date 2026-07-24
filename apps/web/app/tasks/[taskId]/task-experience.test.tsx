@@ -81,11 +81,16 @@ function setup(initial = envelope()) {
 }
 
 describe("mobile golden paths", () => {
-  it("submits final voice immediately and renders a safe completion", async () => {
+  it("prompts for microphone before connecting voice, then submits a final transcript", async () => {
+    const user = userEvent.setup();
     const test = setup();
     render(<TaskExperience taskId="new" initialMode="ptt" dependencies={test.dependencies} />);
 
-    await waitFor(() => expect(test.voice.connect).toHaveBeenCalled());
+    expect(test.voice.connect).not.toHaveBeenCalled();
+    await user.click(await screen.findByRole("button", { name: "Allow microphone" }));
+    await waitFor(() => expect(test.voice.connect).toHaveBeenCalledWith({ clientSecret: "test-secret" }));
+    expect(screen.queryByRole("button", { name: "Allow microphone" })).not.toBeInTheDocument();
+
     test.voice.listener?.({ text: "Fix the greeting", final: true });
     await waitFor(() => expect(test.rest.create).toHaveBeenCalledWith({
       title: "Fix the greeting",
@@ -105,6 +110,19 @@ describe("mobile golden paths", () => {
       },
     });
     expect(await screen.findByText("Greeting fixed")).toBeInTheDocument();
+  });
+
+  it("explains blocked microphone permission and keeps typing available", async () => {
+    const user = userEvent.setup();
+    const test = setup();
+    test.voice.connect.mockRejectedValueOnce(
+      Object.assign(new DOMException("Permission denied", "NotAllowedError")),
+    );
+    render(<TaskExperience taskId="new" initialMode="ptt" dependencies={test.dependencies} />);
+
+    await user.click(await screen.findByRole("button", { name: "Allow microphone" }));
+    expect(await screen.findByText(/Microphone permission is blocked/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hold to talk" })).toBeInTheDocument();
   });
 
   it("sends an idempotent cancellation command", async () => {

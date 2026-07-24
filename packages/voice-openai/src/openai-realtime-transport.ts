@@ -34,6 +34,24 @@ export interface RealtimeSessionClient {
 
 export type RealtimeSessionFactory = () => RealtimeSessionClient;
 
+/**
+ * Ask the browser for microphone access before opening WebRTC. Calling this
+ * from a user gesture surfaces the system permission prompt; without it,
+ * page-load connects often fail silently and leave voice unavailable.
+ */
+export async function ensureMicrophoneAccess(
+  mediaDevices: Pick<MediaDevices, "getUserMedia"> | undefined =
+    typeof navigator === "undefined" ? undefined : navigator.mediaDevices,
+): Promise<void> {
+  if (!mediaDevices?.getUserMedia) {
+    throw new Error("This browser cannot access the microphone.");
+  }
+  const stream = await mediaDevices.getUserMedia({ audio: true });
+  for (const track of stream.getTracks()) {
+    track.stop();
+  }
+}
+
 function createRealtimeSession(): RealtimeSession {
   const agent = new RealtimeAgent({
     name: 'Voice outcome speaker',
@@ -65,7 +83,12 @@ export class OpenAIRealtimeTransport implements VoiceRealtimeTransport {
 
   constructor(private readonly sessionFactory: RealtimeSessionFactory = createRealtimeSession) {}
 
-  async connect(clientSecret: string): Promise<void> {
+  async connect(
+    clientSecret: string,
+    options: {
+      mediaDevices?: Pick<MediaDevices, "getUserMedia">;
+    } = {},
+  ): Promise<void> {
     const generation = ++this.generation;
     const previous = this.session;
     this.session = null;
@@ -86,6 +109,7 @@ export class OpenAIRealtimeTransport implements VoiceRealtimeTransport {
     });
 
     try {
+      await ensureMicrophoneAccess(options.mediaDevices);
       await session.connect({ apiKey: clientSecret });
     } catch (error) {
       if (this.session === session) {
