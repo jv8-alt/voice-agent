@@ -39,6 +39,12 @@ pnpm check
 This runs lint, type checking, tests, and builds recursively for every workspace
 package that implements the corresponding command.
 
+The bundled coding fixture can also be checked directly:
+
+```sh
+pnpm --dir fixtures/demo-repo test
+```
+
 ## Preview the approved UX mock
 
 ```sh
@@ -86,6 +92,10 @@ transcript review step in the shared voice contract.
   not survive an API restart. Replay retains the latest 100 task events by
   default; older cursors require a fresh snapshot.
 - Coding tasks run only in disposable copies of bundled fixture repositories.
+- The initial `demo-repo` fixture is copied once per task. Lease release removes
+  the copy; edits never change the source fixture or another task's workspace.
+- Fixture IDs and task IDs are path-safe identifiers. Traversal and fixture
+  symlinks are rejected so a lease cannot escape its configured roots.
 - Workspace leases expose a local `rootPath` because the demo coding-agent
   adapter requires a directory. This is an intentional adapter seam, not a
   production sandbox guarantee.
