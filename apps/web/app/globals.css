@@ -49,15 +49,19 @@ h1 { margin: 0; font-size: 26px; letter-spacing: -.03em; }
 .start-card p { color: var(--muted); }
 .start-voice {
   display: flex;
+  width: 100%;
   min-height: 60px;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  border: 0;
   border-radius: 999px;
   background: var(--brand);
   color: white;
+  cursor: pointer;
   font-weight: 750;
 }
+.home-voice-status { margin: 8px 0 0; font-size: 13px; }
 .start-pulse {
   width: 10px;
   height: 10px;

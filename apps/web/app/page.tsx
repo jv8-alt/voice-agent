@@ -4,6 +4,7 @@ import type { TaskView } from "@voice-agent/contracts";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { TaskRestClient } from "../lib/task-client";
+import { HomeVoiceStarter } from "./home-voice-starter";
 
 const labels: Record<TaskView["status"], string> = {
   queued: "Queued",
@@ -33,9 +34,7 @@ export default function Home() {
       <section className="start-card" aria-labelledby="start-heading">
         <h2 id="start-heading">What should I work on?</h2>
         <p>Start speaking now, or type your request.</p>
-        <Link className="start-voice" href="/tasks/new?mode=ptt">
-          <span className="start-pulse" aria-hidden="true" /> Push to talk
-        </Link>
+        <HomeVoiceStarter />
         <div className="start-options">
           <Link href="/tasks/new?mode=handsfree">∞ Hands-free</Link>
           <Link href="/tasks/new?mode=typing">⌨ Type instead</Link>
