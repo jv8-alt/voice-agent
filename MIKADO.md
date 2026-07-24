@@ -279,15 +279,16 @@ flowchart BT
   T8 --> T9["T9: core conformance and fakes"]
   T9 --> T10["T10: transport integration contracts"]
   T10 --> T11["T11: surface verification and re-freeze"]
-  T11 --> A1["A1: voice-first home"]
+  T11 --> T12["T12: shared dependency manifests"]
+  T12 --> A1["A1: voice-first home"]
   A1 --> A2["A2: thread and composer"]
   A2 --> A3["A3: task client and socket reducer"]
-  T11 --> B1["B1: Fastify shell and DI"]
+  T12 --> B1["B1: Fastify shell and DI"]
   B1 --> B2["B2: memory state and replay"]
-  T11 --> C1["C1: fixture workspace"]
+  T12 --> C1["C1: fixture workspace"]
   C1 --> C2["C2: Codex adapter"]
-  T11 --> D1["D1: Realtime voice adapter"]
-  T11 --> E1["E1: presenter and risk evaluator"]
+  T12 --> D1["D1: Realtime voice adapter"]
+  T12 --> E1["E1: presenter and risk evaluator"]
   B2 --> F1["F1: orchestration convergence"]
   C2 --> F1
   E1 --> F1
@@ -314,6 +315,7 @@ flowchart BT
 | T9 | done (direct merge) | Core port conformance and reference fakes | Done when actor isolation, follow-up, destructive risk, resume, mid-abort, voice finalization, approval, and dedupe suites pass | high | 400 |
 | T10 | done (direct merge) | WebSocket, HTTP, replay, stale approval, and command integration contract tests | Done when the fake transport system passes every revised success and failure path | high | 400 |
 | T11 | done (direct merge) | Production barrel cleanup, runbook contract notes, full contract verification | Done when recursive lint, typecheck, test, and build pass and downstream branches import only intended subpaths | low | 180 |
+| T12 | done (direct merge) | Shared A-E workspace manifests, dependency policy, and lockfile | Done when every branch dependency resolves from one frozen lockfile and the workspace check passes before branch restart | low | 220 |
 | A1 | pending | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
 | A2 | pending | `apps/web`: thread, auto-submit voice controls, cancel/approval, basic typing | Done when component tests cover immediate voice submission, working, cancel, approval, and outcomes | medium | 400 |
 | A3 | pending | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
@@ -331,9 +333,10 @@ flowchart BT
 
 ## Branch and agent boundaries
 
-- **Trunk:** T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T9 → T10 → T11;
-  root config, this file, and `packages/contracts/**`. T11 re-freezes the
-  corrected shared contracts.
+- **Trunk:** T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T9 → T10 → T11 → T12;
+  root config, this file, shared package manifests, and `packages/contracts/**`.
+  T11 re-freezes the corrected shared contracts; T12 freezes dependencies and
+  the lockfile before parallel branch work.
 - **Revision execution:** T4-T11 run sequentially in one detached worktree on
   stacked `mikado/T*` branches because their contract and test files overlap.
   Existing detached A-E worktrees remain paused and untouched through T11.
@@ -344,7 +347,7 @@ flowchart BT
   `packages/workspace-fixture/**`, and `packages/coding-agent-codex/**`.
 - **Branch D:** D1; only `packages/voice-openai/**`.
 - **Branch E:** E1; only `packages/executive-openai/**`.
-- T11 merges before branches A-E start or resume. T4 names every affected
+- T12 merges before branches A-E start or resume. T4 names every affected
   branch (A-G); changing the corrected freeze after T11 requires another
   plan-revision PR.
 
@@ -365,6 +368,8 @@ flowchart BT
 - Agents open PRs but do not merge or enable auto-merge. The user merges.
 - **Explicit exception:** on 2026-07-24 the user authorized T5-T11 to be
   combined, committed, and merged directly to `main` without PRs.
+- **Explicit exception:** on 2026-07-24 the user authorized the shared T12
+  dependency trunk to be committed and merged directly before A-E restart.
 - Nodes may stack only within one branch and cannot merge ahead of their base.
 - If an attempted node reveals a prerequisite, revert the attempt, record the
   edge and reason here, recurse to a true leaf, and seek approval for any branch
