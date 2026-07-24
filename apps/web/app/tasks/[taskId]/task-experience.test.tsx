@@ -92,6 +92,9 @@ describe("mobile golden paths", () => {
     expect(screen.queryByRole("button", { name: "Allow microphone" })).not.toBeInTheDocument();
 
     test.voice.listener?.({ text: "Fix the greeting", final: true });
+    await waitFor(() => expect(test.voice.speak).toHaveBeenCalledWith(
+      "Got it. I understand what you asked. I’ll review it now.",
+    ));
     await waitFor(() => expect(test.rest.create).toHaveBeenCalledWith({
       title: "Fix the greeting",
       turn: { mode: "ptt", text: "Fix the greeting" },
@@ -260,5 +263,21 @@ describe("mobile golden paths", () => {
       approvalId: "approval-1",
       decision: "approve",
     });
+  });
+
+  it("speaks a sensitive approval request before continuing", async () => {
+    const test = setup(envelope("needs_input"));
+    render(
+      <TaskExperience
+        taskId="task-1"
+        initialMode="handsfree"
+        dependencies={test.dependencies}
+      />,
+    );
+
+    await waitFor(() => expect(test.voice.connect).toHaveBeenCalled());
+    await waitFor(() => expect(test.voice.speak).toHaveBeenCalledWith(
+      "I need your approval before I continue. This change needs approval.",
+    ));
   });
 });

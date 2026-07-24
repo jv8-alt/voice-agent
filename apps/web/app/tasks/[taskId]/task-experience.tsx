@@ -123,6 +123,7 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
   const currentTaskId = useRef(taskId);
   const socketReady = useRef<Promise<void> | null>(null);
   const spokenUpdate = useRef<string | null>(null);
+  const spokenApproval = useRef<string | null>(null);
   const voiceConnect = useRef<Promise<boolean> | null>(null);
   const voiceReadyRef = useRef(false);
   const voiceGeneration = useRef(0);
@@ -197,6 +198,17 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     }
   }, [services.voice, state.envelope, voiceReady]);
 
+  useEffect(() => {
+    const approval = state.envelope?.snapshot.pendingApproval;
+    if (approval && spokenApproval.current !== approval.id && voiceReady) {
+      spokenApproval.current = approval.id;
+      speakOutcome(
+        `I need your approval before I continue. ${approval.reason}`,
+        services.voice,
+      );
+    }
+  }, [services.voice, state.envelope, voiceReady]);
+
   const enableVoice = useCallback(async () => {
     if (voiceReadyRef.current) return true;
     if (voiceConnect.current) return voiceConnect.current;
@@ -253,6 +265,12 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
 
   const submit = async (turn: { mode: TurnMode; text: string }) => {
     try {
+      if (turn.mode !== "typing" && voiceReadyRef.current) {
+        speakOutcome(
+          "Got it. I understand what you asked. I’ll review it now.",
+          services.voice,
+        );
+      }
       if (currentTaskId.current === "new") {
         const envelope = await services.rest.create({
           title: turn.text.slice(0, 72),
