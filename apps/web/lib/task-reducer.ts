@@ -70,7 +70,7 @@ export function reduceTaskMessage(state: TaskState, message: ServerMessage): Tas
       const currentTask = state.envelope?.snapshot.task;
       return update(state, {
         turn: message.turn,
-        task: currentTask ? { ...currentTask, status: message.turn.status } : undefined,
+        ...(currentTask ? { task: { ...currentTask, status: message.turn.status } } : {}),
         eventId: message.eventId,
       });
     }
