@@ -9,7 +9,7 @@ import type {
 } from "@voice-agent/contracts";
 import { OpenAIVoiceSession } from "@voice-agent/voice-openai";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TaskRestClient, TaskSocketClient } from "../../../lib/task-client";
 import { initialTaskState, reduceTaskMessage } from "../../../lib/task-reducer";
 import { TaskThread } from "../task-thread";
@@ -65,6 +65,23 @@ function defaultDependencies(): TaskExperienceDependencies {
   };
 }
 
+function voiceFailureMessage(cause: unknown): string {
+  const name = cause instanceof DOMException ? cause.name : "";
+  const message = cause instanceof Error ? cause.message.toLowerCase() : "";
+  if (
+    name === "NotAllowedError" ||
+    name === "PermissionDeniedError" ||
+    message.includes("permission") ||
+    message.includes("not allowed")
+  ) {
+    return "Microphone permission is blocked. Allow it in the browser address bar, then try again.";
+  }
+  if (name === "NotFoundError" || message.includes("not found") || message.includes("no microphone")) {
+    return "No microphone was found. Connect one, or type your request.";
+  }
+  return "Voice needs microphone access. Allow the prompt, or type your request.";
+}
+
 export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperienceProps) {
   const router = useRouter();
   const services = useMemo(() => dependencies ?? defaultDependencies(), [dependencies]);
@@ -73,9 +90,16 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     envelope: taskId === "new" ? draftEnvelope : null,
   }));
   const [error, setError] = useState<string | null>(null);
+  const [voiceReady, setVoiceReady] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceHint, setVoiceHint] = useState<string | null>(
+    initialMode === "typing" ? null : "Allow microphone access to talk.",
+  );
   const currentTaskId = useRef(taskId);
   const socketReady = useRef<Promise<void> | null>(null);
   const spokenUpdate = useRef<string | null>(null);
+  const voiceConnect = useRef<Promise<boolean> | null>(null);
+  const voiceReadyRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -83,11 +107,6 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     const unsubscribe = services.socket.subscribe((message) => {
       if (active) setState((current) => reduceTaskMessage(current, message));
     });
-    void services.rest.createVoiceClientSecret()
-      .then(({ clientSecret }) => services.voice.connect({ clientSecret }))
-      .catch(() => {
-        if (active) setError("Voice is unavailable. You can still type your request.");
-      });
     if (taskId !== "new") {
       void services.rest.get(taskId)
         .then(async (envelope) => {
@@ -110,11 +129,40 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
 
   useEffect(() => {
     const update = state.envelope?.snapshot.updates.at(-1);
-    if (update?.phase === "completed" && spokenUpdate.current !== update.createdAt) {
+    if (update?.phase === "completed" && spokenUpdate.current !== update.createdAt && voiceReady) {
       spokenUpdate.current = update.createdAt;
       void services.voice.speak([update.headline, update.detail].filter(Boolean).join(". "));
     }
-  }, [services.voice, state.envelope]);
+  }, [services.voice, state.envelope, voiceReady]);
+
+  const enableVoice = useCallback(async () => {
+    if (voiceReadyRef.current) return true;
+    if (voiceConnect.current) return voiceConnect.current;
+
+    setVoiceBusy(true);
+    setVoiceHint("Waiting for microphone permission…");
+    const pending = (async () => {
+      try {
+        const { clientSecret } = await services.rest.createVoiceClientSecret();
+        await services.voice.connect({ clientSecret });
+        voiceReadyRef.current = true;
+        setVoiceReady(true);
+        setVoiceHint(null);
+        setError(null);
+        return true;
+      } catch (cause) {
+        voiceReadyRef.current = false;
+        setVoiceReady(false);
+        setVoiceHint(voiceFailureMessage(cause));
+        return false;
+      } finally {
+        voiceConnect.current = null;
+        setVoiceBusy(false);
+      }
+    })();
+    voiceConnect.current = pending;
+    return pending;
+  }, [services.rest, services.voice]);
 
   const submit = async (turn: { mode: TurnMode; text: string }) => {
     try {
@@ -161,10 +209,24 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
   return (
     <>
       {error && <p className="experience-error" role="status">{error}</p>}
+      {voiceHint && (
+        <div className="experience-error voice-permission" role="status">
+          <p>{voiceHint}</p>
+          <button
+            type="button"
+            className="primary"
+            disabled={voiceBusy}
+            onClick={() => { void enableVoice(); }}
+          >
+            {voiceBusy ? "Requesting…" : "Allow microphone"}
+          </button>
+        </div>
+      )}
       <TaskThread
         envelope={state.envelope}
         voice={services.voice}
         initialMode={initialMode}
+        ensureVoice={enableVoice}
         onSubmit={submit}
         onCancel={() => sendMutation((activeTaskId, commandId) => ({
           type: "task.cancel", taskId: activeTaskId, commandId,

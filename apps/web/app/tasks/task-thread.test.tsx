@@ -1,5 +1,5 @@
 import type { SnapshotEnvelope, VoiceSession, VoiceTranscriptEvent } from "@voice-agent/contracts";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -47,7 +47,7 @@ describe("task thread", () => {
     expect(screen.queryByText("Check mobile Safari")).not.toBeInTheDocument();
   });
 
-  it("ends push-to-talk on pointer up or cancel, even after leaving the mic", () => {
+  it("ends push-to-talk on pointer up or cancel, even after leaving the mic", async () => {
     const voice = new TestVoice();
     render(<TaskThread envelope={envelope()} voice={voice} onCancel={() => {}} onResolveApproval={() => {}} />);
     const mic = screen.getByRole("button", { name: "Hold to talk" });
@@ -55,7 +55,7 @@ describe("task thread", () => {
     Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: setPointerCapture });
 
     fireEvent.pointerDown(mic, { pointerId: 1 });
-    expect(voice.startTurn).toHaveBeenCalledWith("ptt");
+    await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
     expect(setPointerCapture).toHaveBeenCalledWith(1);
 
     fireEvent.pointerUp(mic);
@@ -67,6 +67,26 @@ describe("task thread", () => {
     expect(voice.stopTurn).toHaveBeenCalledOnce();
   });
 
+  it("asks ensureVoice before starting capture so the browser can prompt", async () => {
+    const voice = new TestVoice();
+    const ensureVoice = vi.fn(async () => true);
+    render(
+      <TaskThread
+        envelope={envelope()}
+        voice={voice}
+        ensureVoice={ensureVoice}
+        onCancel={() => {}}
+        onResolveApproval={() => {}}
+      />,
+    );
+    const mic = screen.getByRole("button", { name: "Hold to talk" });
+    Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: vi.fn() });
+
+    fireEvent.pointerDown(mic, { pointerId: 1 });
+    await waitFor(() => expect(ensureVoice).toHaveBeenCalled());
+    await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
+  });
+
   it("labels a final transcript with the mode from capture start, not the current composer mode", async () => {
     const user = userEvent.setup();
     const voice = new TestVoice();
@@ -76,7 +96,7 @@ describe("task thread", () => {
     const mic = screen.getByRole("button", { name: "Hold to talk" });
     Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: vi.fn() });
     fireEvent.pointerDown(mic, { pointerId: 1 });
-    expect(voice.startTurn).toHaveBeenCalledWith("ptt");
+    await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
 
     await user.click(screen.getByRole("button", { name: "Switch to typing" }));
     voice.listener?.({ text: "Check mobile Safari", final: true });

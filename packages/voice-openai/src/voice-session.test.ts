@@ -214,7 +214,25 @@ describe('OpenAIVoiceSession', () => {
 });
 
 describe('OpenAIRealtimeTransport lifecycle', () => {
+  it('requests microphone access before opening a Realtime session', async () => {
+    const stop = vi.fn();
+    const getUserMedia = vi.fn(async () => ({
+      getTracks: () => [{ stop }],
+    }));
+    const session = new FakeSdkRealtimeSession();
+    const transport = new OpenAIRealtimeTransport(() => session);
+
+    await transport.connect('first-secret', { mediaDevices: { getUserMedia } });
+
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: true });
+    expect(stop).toHaveBeenCalledOnce();
+    expect(session.connect).toHaveBeenCalledWith({ apiKey: 'first-secret' });
+  });
+
   it('creates a fresh SDK session when reconnecting after close', async () => {
+    const getUserMedia = vi.fn(async () => ({
+      getTracks: () => [{ stop: vi.fn() }],
+    }));
     const first = new FakeSdkRealtimeSession();
     const second = new FakeSdkRealtimeSession();
     const sessions = [first, second];
@@ -226,9 +244,9 @@ describe('OpenAIRealtimeTransport lifecycle', () => {
       return session;
     });
 
-    await transport.connect('first-secret');
+    await transport.connect('first-secret', { mediaDevices: { getUserMedia } });
     transport.close();
-    await transport.connect('second-secret');
+    await transport.connect('second-secret', { mediaDevices: { getUserMedia } });
 
     expect(first.connect).toHaveBeenCalledWith({ apiKey: 'first-secret' });
     expect(first.close).toHaveBeenCalledOnce();
