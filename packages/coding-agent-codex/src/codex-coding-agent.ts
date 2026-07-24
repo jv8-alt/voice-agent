@@ -212,7 +212,10 @@ export class CodexCodingAgent implements CodingAgent {
     }
     yield* this.#stream(
       thread,
-      'Implement the approved plan now. Stay inside the workspace, do not use the network, and run the relevant tests.',
+      'Carry out the approved plan while preserving the user’s intent. ' +
+        'For an informational request, inspect read-only and answer the question directly; do not modify files ' +
+        'or run unrelated tests. For a change request, implement it and run only relevant verification. ' +
+        'Stay inside the workspace and do not use the network.',
       input.signal,
       'execute',
     );
@@ -235,7 +238,9 @@ export class CodexCodingAgent implements CodingAgent {
     }
     yield* this.#stream(
       thread,
-      `${input.instructions}\nStay inside the workspace, do not use the network, and run the relevant tests.`,
+      `${input.instructions}\nFollow the user’s intent. For an informational request, inspect read-only and ` +
+        'answer directly without modifying files or running unrelated tests. For a change request, implement it ' +
+        'and run only relevant verification. Stay inside the workspace and do not use the network.',
       input.signal,
       'execute',
     );

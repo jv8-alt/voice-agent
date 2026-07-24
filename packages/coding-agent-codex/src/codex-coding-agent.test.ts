@@ -97,12 +97,14 @@ class FakeThread implements CodexThread {
   constructor(
     private readonly outage: boolean,
     private readonly beforeStream?: (() => Promise<void>) | undefined,
+    private readonly inputs?: string[],
   ) {}
 
   async runStreamed(
-    _input: string,
+    input: string,
     options?: TurnOptions,
   ): Promise<{ events: AsyncGenerator<ThreadEvent> }> {
+    this.inputs?.push(input);
     await this.beforeStream?.();
     if (this.outage) {
       return {
@@ -118,6 +120,7 @@ class FakeThread implements CodexThread {
 class FakeCodexClient implements CodexClient {
   readonly starts: ThreadOptions[] = [];
   readonly resumes: Array<{ id: string; options: ThreadOptions }> = [];
+  readonly inputs: string[] = [];
 
   constructor(
     private readonly outage = false,
@@ -126,12 +129,12 @@ class FakeCodexClient implements CodexClient {
 
   startThread(options: ThreadOptions = {}): CodexThread {
     this.starts.push(options);
-    return new FakeThread(this.outage);
+    return new FakeThread(this.outage, undefined, this.inputs);
   }
 
   resumeThread(id: string, options: ThreadOptions = {}): CodexThread {
     this.resumes.push({ id, options });
-    return new FakeThread(this.outage, this.beforeExecute);
+    return new FakeThread(this.outage, this.beforeExecute, this.inputs);
   }
 }
 
@@ -288,6 +291,8 @@ describe('CodexCodingAgent', () => {
       { id: 'thread-1', options: expect.objectContaining({ sandboxMode: 'workspace-write', networkAccessEnabled: false }) },
       { id: 'thread-1', options: expect.objectContaining({ sandboxMode: 'workspace-write', networkAccessEnabled: false }) },
     ]);
+    expect(client.inputs[0]).toContain('For an informational request, inspect read-only and answer the question directly');
+    expect(client.inputs[1]).toContain('answer directly without modifying files or running unrelated tests');
   });
 
   it('executes the bundled fixture test inside its disposable lease', async () => {

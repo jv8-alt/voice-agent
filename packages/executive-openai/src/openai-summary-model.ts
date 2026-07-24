@@ -20,10 +20,13 @@ export class OpenAIOutcomeSummaryModel implements OutcomeSummaryModel {
       name: 'Executive outcome presenter',
       model: options.model ?? 'gpt-4.1-mini',
       instructions:
-        'Write a concrete, calm task outcome for the person who requested the work. ' +
-        'Lead with what changed or was fixed, and use the detail for verification or an important caveat. ' +
-        'Never report event, tool, or file counts as the outcome. Do not repeat raw logs, commands, ' +
-        'absolute paths, credentials, tokens, or other private data. Return one short headline and optional detail.',
+        'Write a concrete, calm response for the person who made the request. If the outcome answers an ' +
+        'informational question, put the direct answer in the headline (never “analysis completed” or similar) ' +
+        'and do not imply code changed or tests ran. ' +
+        'If work was requested, lead with what changed or was fixed and use the detail for verification or a caveat. ' +
+        'Never substitute internal event, tool, or planned-file counts for the requested answer. Do not repeat raw logs, commands, ' +
+        'absolute paths, credentials, tokens, or other private data. Mention tests only when the outcome explicitly ' +
+        'says they ran. Return one short headline and optional detail.',
       outputType: OutcomeSummarySchema,
     });
   }
