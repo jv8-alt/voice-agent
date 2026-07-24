@@ -316,7 +316,7 @@ flowchart BT
 | T10 | done (direct merge) | WebSocket, HTTP, replay, stale approval, and command integration contract tests | Done when the fake transport system passes every revised success and failure path | high | 400 |
 | T11 | done (direct merge) | Production barrel cleanup, runbook contract notes, full contract verification | Done when recursive lint, typecheck, test, and build pass and downstream branches import only intended subpaths | low | 180 |
 | T12 | done (direct merge) | Shared A-E workspace manifests, dependency policy, and lockfile | Done when every branch dependency resolves from one frozen lockfile and the workspace check passes before branch restart | low | 220 |
-| A1 | pending | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
+| A1 | done ([PR #4](https://github.com/jv8-alt/voice-agent/pull/4)) | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
 | A2 | pending | `apps/web`: thread, auto-submit voice controls, cancel/approval, basic typing | Done when component tests cover immediate voice submission, working, cancel, approval, and outcomes | medium | 400 |
 | A3 | pending | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
 | B1 | pending | `apps/task-api`: Fastify shell, config, errors, DI seams | Done when injection tests verify health and every pinned HTTP error | low | 300 |
