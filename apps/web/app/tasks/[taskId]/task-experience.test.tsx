@@ -150,6 +150,53 @@ describe("mobile golden paths", () => {
     expect(screen.getByRole("button", { name: "Hold to talk" })).toBeInTheDocument();
   });
 
+  it("speaks completed text through the browser speech output", async () => {
+    const originalSpeech = Object.getOwnPropertyDescriptor(window, "speechSynthesis");
+    const speak = vi.fn();
+    Object.defineProperty(window, "speechSynthesis", {
+      configurable: true,
+      value: { cancel: vi.fn(), speak },
+    });
+    vi.stubGlobal("SpeechSynthesisUtterance", class {
+      rate = 1;
+      constructor(readonly text: string) {}
+    });
+    try {
+      const user = userEvent.setup();
+      const test = setup();
+      render(<TaskExperience taskId="new" initialMode="ptt" dependencies={test.dependencies} />);
+      await user.click(await screen.findByRole("button", { name: "Allow microphone" }));
+      await waitFor(() => expect(test.voice.connect).toHaveBeenCalled());
+
+      test.emit({
+        type: "task.completed",
+        eventId: "4",
+        taskId: "task-1",
+        turnId: "turn-1",
+        update: {
+          taskId: "task-1",
+          turnId: "turn-1",
+          phase: "completed",
+          headline: "`greeting.js` returns personalized greetings",
+          detail: "No code changes were made.",
+          createdAt: now,
+        },
+      });
+
+      await waitFor(() => expect(speak).toHaveBeenCalled());
+      expect(speak.mock.calls[0]?.[0]).toMatchObject({
+        text: "greeting.js returns personalized greetings. No code changes were made.",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      if (originalSpeech) {
+        Object.defineProperty(window, "speechSynthesis", originalSpeech);
+      } else {
+        Reflect.deleteProperty(window, "speechSynthesis");
+      }
+    }
+  });
+
   it("sends an idempotent cancellation command", async () => {
     const test = setup();
     render(<TaskExperience taskId="task-1" initialMode="ptt" dependencies={test.dependencies} />);

@@ -93,6 +93,22 @@ async function microphonePermissionState(): Promise<PermissionState | "unsupport
   }
 }
 
+function speakOutcome(text: string, voice: VoiceSession): void {
+  const plainText = text.replace(/[`*_#]/g, "").trim();
+  if (
+    typeof window !== "undefined" &&
+    "speechSynthesis" in window &&
+    typeof SpeechSynthesisUtterance !== "undefined"
+  ) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    utterance.rate = 1;
+    window.speechSynthesis.speak(utterance);
+    return;
+  }
+  void voice.speak(plainText).catch(() => {});
+}
+
 export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperienceProps) {
   const router = useRouter();
   const services = useMemo(() => dependencies ?? defaultDependencies(), [dependencies]);
@@ -177,7 +193,7 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     const update = state.envelope?.snapshot.updates.at(-1);
     if (update?.phase === "completed" && spokenUpdate.current !== update.createdAt && voiceReady) {
       spokenUpdate.current = update.createdAt;
-      void services.voice.speak([update.headline, update.detail].filter(Boolean).join(". "));
+      speakOutcome([update.headline, update.detail].filter(Boolean).join(". "), services.voice);
     }
   }, [services.voice, state.envelope, voiceReady]);
 
