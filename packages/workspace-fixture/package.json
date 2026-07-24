@@ -1,0 +1,19 @@
+{
+  "name": "@voice-agent/workspace-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@voice-agent/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^3.2.7"
+  }
+}
