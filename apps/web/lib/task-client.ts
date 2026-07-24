@@ -71,10 +71,10 @@ export class TaskSocketClient {
       this.pending.forEach((command) => this.sendNow(command));
     });
     socket.addEventListener("message", (event) => {
-      if (this.socket !== socket) return;
       const message = ServerMessageSchema.parse(JSON.parse(String((event as MessageEvent).data)));
       if (message.type === "task.cancelled") this.pending.delete(message.commandId);
       if (message.type === "approval.resolved") this.pending.delete(message.commandId);
+      if (this.socket !== socket) return;
       this.listeners.forEach((listener) => listener(message));
     });
   }
