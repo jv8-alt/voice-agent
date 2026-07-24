@@ -67,6 +67,23 @@ describe("task thread", () => {
     expect(voice.stopTurn).toHaveBeenCalledOnce();
   });
 
+  it("labels a final transcript with the mode from capture start, not the current composer mode", async () => {
+    const user = userEvent.setup();
+    const voice = new TestVoice();
+    const submit = vi.fn();
+    render(<TaskThread envelope={envelope()} voice={voice} onSubmit={submit} onCancel={() => {}} onResolveApproval={() => {}} />);
+
+    const mic = screen.getByRole("button", { name: "Hold to talk" });
+    Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: vi.fn() });
+    fireEvent.pointerDown(mic, { pointerId: 1 });
+    expect(voice.startTurn).toHaveBeenCalledWith("ptt");
+
+    await user.click(screen.getByRole("button", { name: "Switch to typing" }));
+    voice.listener?.({ text: "Check mobile Safari", final: true });
+
+    expect(submit).toHaveBeenCalledWith({ mode: "ptt", text: "Check mobile Safari" });
+  });
+
   it("renders working, cancel, approval, and completed outcomes", async () => {
     const user = userEvent.setup();
     const cancel = vi.fn();
