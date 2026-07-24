@@ -63,11 +63,15 @@ export class TaskSocketClient {
   ) {}
 
   connect() {
-    this.socket = this.createSocket(this.url);
-    this.socket.addEventListener("open", () => {
+    this.close();
+    const socket = this.createSocket(this.url);
+    this.socket = socket;
+    socket.addEventListener("open", () => {
+      if (this.socket !== socket) return;
       this.pending.forEach((command) => this.sendNow(command));
     });
-    this.socket.addEventListener("message", (event) => {
+    socket.addEventListener("message", (event) => {
+      if (this.socket !== socket) return;
       const message = ServerMessageSchema.parse(JSON.parse(String((event as MessageEvent).data)));
       if (message.type === "task.cancelled") this.pending.delete(message.commandId);
       if (message.type === "approval.resolved") this.pending.delete(message.commandId);

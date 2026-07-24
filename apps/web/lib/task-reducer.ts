@@ -66,8 +66,14 @@ export function reduceTaskMessage(state: TaskState, message: ServerMessage): Tas
       return { envelope: { snapshot: message.snapshot, lastEventId: message.lastEventId }, needsResync: false, error: null };
     case "task.created":
       return update(state, { task: message.task, eventId: message.eventId });
-    case "turn.created":
-      return update(state, { turn: message.turn, eventId: message.eventId });
+    case "turn.created": {
+      const currentTask = state.envelope?.snapshot.task;
+      return update(state, {
+        turn: message.turn,
+        task: currentTask ? { ...currentTask, status: message.turn.status } : undefined,
+        eventId: message.eventId,
+      });
+    }
     case "progress.updated":
       return update(state, { update: message.update, eventId: message.eventId });
     case "approval.required":
