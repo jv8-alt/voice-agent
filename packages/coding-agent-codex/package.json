@@ -2,9 +2,21 @@
   "name": "@voice-agent/coding-agent-codex",
   "version": "0.1.0",
   "private": true,
+  "description": "Codex SDK adapter for planned and resumable fixture coding runs.",
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@openai/codex-sdk": "^0.145.0",
