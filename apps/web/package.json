@@ -5,6 +5,13 @@
   "engines": {
     "node": ">=22"
   },
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@voice-agent/contracts": "workspace:*",
     "next": "^16.2.11",
