@@ -120,6 +120,16 @@ class FakeCodexClient implements CodexClient {
   }
 }
 
+class ThrowingCodexClient implements CodexClient {
+  startThread(): CodexThread {
+    throw new Error('Codex process failed to start');
+  }
+
+  resumeThread(): CodexThread {
+    throw new Error('Codex session provider failed');
+  }
+}
+
 runCodingAgentConformance((scenario) => (
   new CodexCodingAgent({ client: new FakeCodexClient(scenario === 'outage') })
 ));
@@ -149,6 +159,80 @@ async function collect<T>(events: AsyncIterable<T>): Promise<T[]> {
 
 describe('CodexCodingAgent', () => {
   const workspace = { leaseId: 'lease-1', rootPath: '/tmp/codex-workspace' };
+  const invalidWorkspace = { leaseId: 'lease-invalid', rootPath: 'relative/workspace' };
+
+  function expectInvalidInput(events: Awaited<ReturnType<typeof collect>>) {
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'failed',
+      error: {
+        code: 'invalid_input',
+        retryable: false,
+        message: 'Workspace rootPath must be an absolute normalized path',
+      },
+    });
+  }
+
+  it('preserves invalid_input for an invalid planning workspace root', async () => {
+    const client = new FakeCodexClient();
+    const agent = new CodexCodingAgent({ client });
+
+    const events = await collect(agent.plan({
+      ...input(invalidWorkspace),
+      instructions: 'Improve the greeting',
+    }));
+
+    expectInvalidInput(events);
+    expect(client.starts).toHaveLength(0);
+  });
+
+  it('preserves invalid_input for an invalid run workspace root', async () => {
+    const client = new FakeCodexClient();
+    const agent = new CodexCodingAgent({ client });
+
+    const events = await collect(agent.run({
+      ...input(invalidWorkspace),
+      agentThreadId: 'thread-1',
+    }));
+
+    expectInvalidInput(events);
+    expect(client.resumes).toHaveLength(0);
+  });
+
+  it('preserves invalid_input for an invalid resume workspace root', async () => {
+    const client = new FakeCodexClient();
+    const agent = new CodexCodingAgent({ client });
+
+    const events = await collect(agent.resume({
+      ...input(invalidWorkspace),
+      agentThreadId: 'thread-1',
+      instructions: 'Add another test',
+    }));
+
+    expectInvalidInput(events);
+    expect(client.resumes).toHaveLength(0);
+  });
+
+  it('still normalizes untyped Codex provider failures as retryable dependency outages', async () => {
+    const agent = new CodexCodingAgent({ client: new ThrowingCodexClient() });
+
+    const planEvents = await collect(agent.plan({
+      ...input(workspace),
+      instructions: 'Improve the greeting',
+    }));
+    const runEvents = await collect(agent.run({
+      ...input(workspace),
+      agentThreadId: 'thread-1',
+    }));
+
+    for (const events of [planEvents, runEvents]) {
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        type: 'failed',
+        error: { code: 'dependency_unavailable', retryable: true },
+      });
+    }
+  });
 
   it('plans in a read-only, offline thread and returns normalized actions', async () => {
     const client = new FakeCodexClient();

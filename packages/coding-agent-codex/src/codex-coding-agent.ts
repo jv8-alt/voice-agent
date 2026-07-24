@@ -141,11 +141,11 @@ function dependencyFailure(message: string): CodingEvent {
   };
 }
 
-function failureFromCaught(error: unknown): CodingEvent {
+function normalizedFailure(error: unknown, fallback: string): CodingEvent {
   if (error instanceof TaskError) {
     return { type: 'failed', error: error.toProblem() };
   }
-  return dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+  return dependencyFailure(error instanceof Error ? error.message : fallback);
 }
 
 /**
@@ -168,7 +168,7 @@ export class CodexCodingAgent implements CodingAgent {
       thread = this.#client.startThread(threadOptions(input.workspace.rootPath, 'read-only'));
     } catch (error) {
       if (input.signal.aborted) return;
-      yield failureFromCaught(error);
+      yield normalizedFailure(error, 'Codex is unavailable');
       return;
     }
 
@@ -193,7 +193,7 @@ export class CodexCodingAgent implements CodingAgent {
       );
     } catch (error) {
       if (input.signal.aborted) return;
-      yield failureFromCaught(error);
+      yield normalizedFailure(error, 'Codex is unavailable');
       return;
     }
     yield* this.#stream(
@@ -216,7 +216,7 @@ export class CodexCodingAgent implements CodingAgent {
       );
     } catch (error) {
       if (input.signal.aborted) return;
-      yield failureFromCaught(error);
+      yield normalizedFailure(error, 'Codex is unavailable');
       return;
     }
     yield* this.#stream(
@@ -278,7 +278,7 @@ export class CodexCodingAgent implements CodingAgent {
       if (signal.aborted) {
         return;
       }
-      yield dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+      yield normalizedFailure(error, 'Codex is unavailable');
     }
   }
 }
