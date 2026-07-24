@@ -32,6 +32,7 @@ export interface CodexClient {
 
 export interface CodexCodingAgentOptions {
   readonly client?: CodexClient;
+  readonly apiKey?: string;
 }
 
 const planOutputSchema = {
@@ -44,10 +45,10 @@ const planOutputSchema = {
         properties: {
           kind: { type: 'string', enum: ['read', 'write', 'exec', 'network', 'other'] },
           summary: { type: 'string' },
-          paths: { type: 'array', items: { type: 'string' } },
-          command: { type: 'string' },
+          paths: { type: ['array', 'null'], items: { type: 'string' } },
+          command: { type: ['string', 'null'] },
         },
-        required: ['kind', 'summary'],
+        required: ['kind', 'summary', 'paths', 'command'],
         additionalProperties: false,
       },
     },
@@ -90,17 +91,18 @@ function parsePlan(text: string): ProposedAction[] {
     if (!kinds.some((kind) => kind === action.kind) || typeof action.summary !== 'string' || action.summary.length === 0) {
       throw dependencyUnavailableError('Codex returned an invalid planned action');
     }
-    if (action.paths !== undefined && (!Array.isArray(action.paths) || !action.paths.every((path) => typeof path === 'string'))) {
+    if (action.paths !== undefined && action.paths !== null &&
+      (!Array.isArray(action.paths) || !action.paths.every((path) => typeof path === 'string'))) {
       throw dependencyUnavailableError('Codex returned invalid action paths');
     }
-    if (action.command !== undefined && typeof action.command !== 'string') {
+    if (action.command !== undefined && action.command !== null && typeof action.command !== 'string') {
       throw dependencyUnavailableError('Codex returned an invalid action command');
     }
     return {
       kind: action.kind as ProposedAction['kind'],
       summary: action.summary,
-      ...(action.paths !== undefined ? { paths: action.paths as string[] } : {}),
-      ...(action.command !== undefined ? { command: action.command } : {}),
+      ...(action.paths !== undefined && action.paths !== null ? { paths: action.paths as string[] } : {}),
+      ...(action.command !== undefined && action.command !== null ? { command: action.command } : {}),
     };
   });
 }
@@ -167,7 +169,8 @@ export class CodexCodingAgent implements CodingAgent {
   readonly #client: CodexClient;
 
   constructor(options: CodexCodingAgentOptions = {}) {
-    this.#client = options.client ?? new Codex();
+    this.#client = options.client ??
+      new Codex(options.apiKey === undefined ? undefined : { apiKey: options.apiKey });
   }
 
   async *plan(input: PlanInput): AsyncIterable<CodingEvent> {

@@ -29,7 +29,7 @@ export async function buildDemoTaskApi(
   const orchestrator = new TaskOrchestrator({
     ...memory,
     workspaceProvider: new FixtureWorkspaceProvider(),
-    codingAgent: overrides.codingAgent ?? new CodexCodingAgent(),
+    codingAgent: overrides.codingAgent ?? new CodexCodingAgent({ apiKey: config.openAiApiKey }),
     presenter: overrides.presenter ??
       new OpenAIExecutivePresenter(new OpenAIOutcomeSummaryModel()),
     riskEvaluator: new HeuristicActionRiskEvaluator(),
