@@ -45,3 +45,9 @@ export {
 export type { TaskStatus, TransitionTaskStatusOptions } from './status.js';
 
 export * from './ports/index.js';
+
+export * from './ws/index.js';
+export * from './http/index.js';
+export * from './openapi/index.js';
+export * from './replay/index.js';
+export * from './conformance/index.js';
