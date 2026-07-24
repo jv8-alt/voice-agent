@@ -108,7 +108,7 @@ export class FixtureWorkspaceProvider implements WorkspaceProvider {
         throw error;
       }
       throw dependencyUnavailableError('Unable to provision fixture workspace', {
-        details: { fixture: basename(input.workspaceId) },
+        details: { workspaceId: basename(input.workspaceId) },
       });
     }
   }

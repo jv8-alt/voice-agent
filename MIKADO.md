@@ -326,7 +326,7 @@ flowchart BT
 | D1 | done ([PR #5](https://github.com/jv8-alt/voice-agent/pull/5)) | `packages/voice-openai`: Realtime `VoiceSession` | Done when fake transport covers PTT, hands-free, interruption, and speech | high | 380 |
 | E1 | done ([PR #6](https://github.com/jv8-alt/voice-agent/pull/6)) | `packages/executive-openai`: presenter and risk evaluator | Done when destructive plans pause, safe plans proceed, and raw logs never leak | high | 380 |
 | F1 | done ([PR #13](https://github.com/jv8-alt/voice-agent/pull/13)) | Task orchestration convergence | Done when tests cover safe run, approve/reject, stale approval, cancel, resume, and failure | high | 400 |
-| F2 | pending | REST/WebSocket/token route convergence | Done when a client creates, follows, cancels, and approves a task | high | 400 |
+| F2 | done ([PR #14](https://github.com/jv8-alt/voice-agent/pull/14)) | REST/WebSocket/token route convergence | Done when a client creates, follows, cancels, and approves a task | high | 400 |
 | G1 | pending | Real web/API/voice convergence | Done when mobile completes safe, cancelled, and approved-sensitive voice paths | high | 400 |
 | G2 | pending | Fixture E2E, startup script, README, production adapter map | Done when a fresh checkout runs all golden demo paths | medium | 350 |
 | G | pending | Accepted fixture-repository voice coding-agent demo | Done when all goal capabilities work and final checks pass | medium | 0 |
