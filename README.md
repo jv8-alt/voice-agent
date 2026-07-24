@@ -9,8 +9,10 @@ repositories. The demo is being built from the interaction reference in
 
 The repository currently contains the workspace foundation, interactive HTML
 mock, shared `@voice-agent/contracts` package, and the injectable Fastify
-application shell. Task routes, WebSocket orchestration, Next.js, OpenAI voice,
-and Codex adapters will be added by the nodes listed in `MIKADO.md`.
+application shell. Process-local task, receipt, replay, and active-run adapters
+are also available for later API wiring. Task routes, WebSocket orchestration,
+Next.js, OpenAI voice, and Codex adapters will be added by the nodes listed in
+`MIKADO.md`.
 
 ## Prerequisites
 
@@ -80,8 +82,9 @@ transcript review step in the shared voice contract.
 
 ## Demo limitations
 
-- Task and event state will initially be process-local and will not survive an
-  API restart.
+- Task, command receipt, event, and active-run state is process-local and does
+  not survive an API restart. Replay retains the latest 100 task events by
+  default; older cursors require a fresh snapshot.
 - Coding tasks run only in disposable copies of bundled fixture repositories.
 - Workspace leases expose a local `rootPath` because the demo coding-agent
   adapter requires a directory. This is an intentional adapter seam, not a
