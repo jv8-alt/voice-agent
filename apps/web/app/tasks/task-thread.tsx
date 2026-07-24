@@ -44,16 +44,39 @@ export function TaskThread({
   const [mode, setMode] = useState<TurnMode>(initialMode);
   const [draft, setDraft] = useState("");
   const [partial, setPartial] = useState("");
+  const [pttHeld, setPttHeld] = useState(false);
   // Final transcripts can arrive after the composer mode changes; label the
   // turn with the mode that was active when capture started.
   const captureModeRef = useRef<VoiceSessionMode>("ptt");
+  const captureAttemptRef = useRef(0);
+  const pttHeldRef = useRef(false);
+  const pttCapturingRef = useRef(false);
 
   const beginVoiceCapture = (captureMode: VoiceSessionMode) => {
     captureModeRef.current = captureMode;
-    void (async () => {
-      if (ensureVoice && !(await ensureVoice())) return;
+    const attempt = ++captureAttemptRef.current;
+    const start = () => {
+      if (captureAttemptRef.current !== attempt) return;
+      if (captureMode === "ptt" && !pttHeldRef.current) return;
       voice?.startTurn(captureMode);
-    })();
+      if (captureMode === "ptt") pttCapturingRef.current = true;
+    };
+    if (!ensureVoice) {
+      start();
+      return;
+    }
+    void ensureVoice().then((ready) => {
+      if (ready) start();
+    });
+  };
+
+  const endPushToTalk = () => {
+    pttHeldRef.current = false;
+    setPttHeld(false);
+    captureAttemptRef.current += 1;
+    if (!pttCapturingRef.current) return;
+    pttCapturingRef.current = false;
+    voice?.stopTurn();
   };
 
   useEffect(() => voice?.onTranscript(({ final, text }) => {
@@ -127,6 +150,10 @@ export function TaskThread({
           <div className="voice-controls">
             <button
               onClick={() => {
+                pttHeldRef.current = false;
+                setPttHeld(false);
+                pttCapturingRef.current = false;
+                captureAttemptRef.current += 1;
                 voice?.stopTurn();
                 setMode("typing");
               }}
@@ -134,21 +161,29 @@ export function TaskThread({
             >⌨</button>
             <button
               className="mic primary"
+              aria-pressed={mode === "ptt" && pttHeld}
               onPointerDown={(event) => {
                 if (mode !== "ptt") return;
                 event.preventDefault();
                 event.currentTarget.setPointerCapture(event.pointerId);
+                pttHeldRef.current = true;
+                setPttHeld(true);
                 beginVoiceCapture(mode);
               }}
-              onPointerUp={() => { if (mode === "ptt") voice?.stopTurn(); }}
-              onPointerCancel={() => { if (mode === "ptt") voice?.stopTurn(); }}
+              onPointerUp={() => { if (mode === "ptt") endPushToTalk(); }}
+              onPointerCancel={() => { if (mode === "ptt") endPushToTalk(); }}
             >
-              {mode === "handsfree" ? "Listening hands-free" : "Hold to talk"}
+              {mode === "handsfree"
+                ? "Listening hands-free"
+                : pttHeld
+                  ? "Listening… release to send"
+                  : "Hold to talk"}
             </button>
             <button
               aria-pressed={mode === "handsfree"}
               onClick={() => {
                 const next = mode === "handsfree" ? "ptt" : "handsfree";
+                captureAttemptRef.current += 1;
                 voice?.stopTurn();
                 setMode(next);
                 if (next === "handsfree") beginVoiceCapture(next);

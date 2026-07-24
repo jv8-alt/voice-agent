@@ -1,5 +1,5 @@
 import type { SnapshotEnvelope, VoiceSession, VoiceTranscriptEvent } from "@voice-agent/contracts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -57,9 +57,13 @@ describe("task thread", () => {
     fireEvent.pointerDown(mic, { pointerId: 1 });
     await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
     expect(setPointerCapture).toHaveBeenCalledWith(1);
+    expect(screen.getByRole("button", { name: "Listening… release to send" }))
+      .toHaveAttribute("aria-pressed", "true");
 
     fireEvent.pointerUp(mic);
     expect(voice.stopTurn).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Hold to talk" }))
+      .toHaveAttribute("aria-pressed", "false");
 
     voice.stopTurn.mockClear();
     fireEvent.pointerDown(mic, { pointerId: 2 });
@@ -85,6 +89,34 @@ describe("task thread", () => {
     fireEvent.pointerDown(mic, { pointerId: 1 });
     await waitFor(() => expect(ensureVoice).toHaveBeenCalled());
     await waitFor(() => expect(voice.startTurn).toHaveBeenCalledWith("ptt"));
+  });
+
+  it("does not start push-to-talk after release while voice is still connecting", async () => {
+    const voice = new TestVoice();
+    let finishConnection: ((ready: boolean) => void) | undefined;
+    const ensureVoice = vi.fn(() => new Promise<boolean>((resolve) => {
+      finishConnection = resolve;
+    }));
+    render(
+      <TaskThread
+        envelope={envelope()}
+        voice={voice}
+        ensureVoice={ensureVoice}
+        onCancel={() => {}}
+        onResolveApproval={() => {}}
+      />,
+    );
+    const mic = screen.getByRole("button", { name: "Hold to talk" });
+    Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: vi.fn() });
+
+    fireEvent.pointerDown(mic, { pointerId: 1 });
+    fireEvent.pointerUp(mic, { pointerId: 1 });
+    await act(async () => {
+      finishConnection?.(true);
+    });
+
+    expect(voice.startTurn).not.toHaveBeenCalled();
+    expect(voice.stopTurn).not.toHaveBeenCalled();
   });
 
   it("labels a final transcript with the mode from capture start, not the current composer mode", async () => {
