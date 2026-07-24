@@ -70,4 +70,15 @@ describe('FixtureWorkspaceProvider', () => {
       code: 'invalid_input',
     });
   });
+
+  it('reports only the opaque workspace ID when provisioning fails', async () => {
+    const blockedLeaseRoot = join(sandbox, 'blocked-lease-root');
+    await writeFile(blockedLeaseRoot, 'not a directory');
+    const provider = new FixtureWorkspaceProvider({ fixtureRoot, leaseRoot: blockedLeaseRoot });
+
+    await expect(provider.acquire({ taskId: 'blocked', workspaceId: 'demo-repo' })).rejects.toMatchObject({
+      code: 'dependency_unavailable',
+      details: { workspaceId: 'demo-repo' },
+    });
+  });
 });
