@@ -1,5 +1,5 @@
 import type { SnapshotEnvelope, VoiceSession, VoiceTranscriptEvent } from "@voice-agent/contracts";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -45,6 +45,43 @@ describe("task thread", () => {
 
     expect(submit).toHaveBeenCalledWith({ mode: "ptt", text: "Check mobile Safari" });
     expect(screen.queryByText("Check mobile Safari")).not.toBeInTheDocument();
+  });
+
+  it("ends push-to-talk on pointer up or cancel, even after leaving the mic", () => {
+    const voice = new TestVoice();
+    render(<TaskThread envelope={envelope()} voice={voice} onCancel={() => {}} onResolveApproval={() => {}} />);
+    const mic = screen.getByRole("button", { name: "Hold to talk" });
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: setPointerCapture });
+
+    fireEvent.pointerDown(mic, { pointerId: 1 });
+    expect(voice.startTurn).toHaveBeenCalledWith("ptt");
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+
+    fireEvent.pointerUp(mic);
+    expect(voice.stopTurn).toHaveBeenCalledOnce();
+
+    voice.stopTurn.mockClear();
+    fireEvent.pointerDown(mic, { pointerId: 2 });
+    fireEvent.pointerCancel(mic);
+    expect(voice.stopTurn).toHaveBeenCalledOnce();
+  });
+
+  it("labels a final transcript with the mode from capture start, not the current composer mode", async () => {
+    const user = userEvent.setup();
+    const voice = new TestVoice();
+    const submit = vi.fn();
+    render(<TaskThread envelope={envelope()} voice={voice} onSubmit={submit} onCancel={() => {}} onResolveApproval={() => {}} />);
+
+    const mic = screen.getByRole("button", { name: "Hold to talk" });
+    Object.defineProperty(mic, "setPointerCapture", { configurable: true, value: vi.fn() });
+    fireEvent.pointerDown(mic, { pointerId: 1 });
+    expect(voice.startTurn).toHaveBeenCalledWith("ptt");
+
+    await user.click(screen.getByRole("button", { name: "Switch to typing" }));
+    voice.listener?.({ text: "Check mobile Safari", final: true });
+
+    expect(submit).toHaveBeenCalledWith({ mode: "ptt", text: "Check mobile Safari" });
   });
 
   it("renders working, cancel, approval, and completed outcomes", async () => {
