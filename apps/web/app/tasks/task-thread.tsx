@@ -127,10 +127,9 @@ export function TaskThread({
             <button
               className="mic primary"
               onPointerDown={(event) => {
-                if (mode === "ptt") {
-                  event.preventDefault();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                }
+                if (mode !== "ptt") return;
+                event.preventDefault();
+                event.currentTarget.setPointerCapture(event.pointerId);
                 beginVoiceCapture(mode);
               }}
               onPointerUp={() => { if (mode === "ptt") voice?.stopTurn(); }}
@@ -142,9 +141,9 @@ export function TaskThread({
               aria-pressed={mode === "handsfree"}
               onClick={() => {
                 const next = mode === "handsfree" ? "ptt" : "handsfree";
+                voice?.stopTurn();
                 setMode(next);
                 if (next === "handsfree") beginVoiceCapture(next);
-                else voice?.stopTurn();
               }}
             >∞</button>
           </div>
