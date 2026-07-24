@@ -8,9 +8,9 @@ repositories. The demo is being built from the interaction reference in
 ## Current status
 
 The repository currently contains the workspace foundation, interactive HTML
-mock, and the shared `@voice-agent/contracts` package. Next.js, Fastify,
-WebSocket orchestration, OpenAI voice, and Codex adapters will be added by the
-nodes listed in `MIKADO.md`.
+mock, shared `@voice-agent/contracts` package, and the injectable Fastify
+application shell. Task routes, WebSocket orchestration, Next.js, OpenAI voice,
+and Codex adapters will be added by the nodes listed in `MIKADO.md`.
 
 ## Prerequisites
 
@@ -37,6 +37,12 @@ pnpm check
 This runs lint, type checking, tests, and builds recursively for every workspace
 package that implements the corresponding command.
 
+The bundled coding fixture can also be checked directly:
+
+```sh
+pnpm --dir fixtures/demo-repo test
+```
+
 ## Preview the approved UX mock
 
 ```sh
@@ -47,8 +53,9 @@ Open [http://localhost:4173/mock.html](http://localhost:4173/mock.html).
 
 ## Run the application
 
-The runnable Next.js and Fastify applications have not landed yet. Once their
-Mikado nodes are complete, the canonical command will be:
+The Fastify shell is available for injection tests but has no task routes or
+standalone startup entry point until F2. Once the runnable applications land,
+the canonical command will be:
 
 ```sh
 pnpm dev
@@ -73,8 +80,8 @@ transcript review step in the shared voice contract.
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Task API only | OpenAI Realtime token minting, Codex, and executive summaries |
-| `PORT` | Task API | Fastify port; defaults to `3001` |
-| `WEB_ORIGIN` | Task API | Allowed browser origin; defaults to `http://localhost:3000` |
+| `PORT` | Task API | Required Fastify port from `1` through `65535` |
+| `WEB_ORIGIN` | Task API | Required exact HTTP(S) browser origin, such as `http://localhost:3000` |
 | `DEMO_REPO_ID` | Task API | Local fixture repository selected for new tasks |
 
 ## Demo limitations
@@ -82,6 +89,10 @@ transcript review step in the shared voice contract.
 - Task and event state will initially be process-local and will not survive an
   API restart.
 - Coding tasks run only in disposable copies of bundled fixture repositories.
+- The initial `demo-repo` fixture is copied once per task. Lease release removes
+  the copy; edits never change the source fixture or another task's workspace.
+- Fixture IDs and task IDs are path-safe identifiers. Traversal and fixture
+  symlinks are rejected so a lease cannot escape its configured roots.
 - Workspace leases expose a local `rootPath` because the demo coding-agent
   adapter requires a directory. This is an intentional adapter seam, not a
   production sandbox guarantee.
