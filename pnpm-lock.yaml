@@ -23,6 +23,9 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      '@voice-agent/task-store-memory':
+        specifier: workspace:*
+        version: link:../../packages/task-store-memory
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(supports-color@7.2.0)

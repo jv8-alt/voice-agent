@@ -23,6 +23,7 @@
     "fastify": "^5.10.0"
   },
   "devDependencies": {
+    "@voice-agent/task-store-memory": "workspace:*",
     "@types/node": "^22.20.1",
     "eslint": "^9.39.5",
     "tsx": "^4.23.1",
