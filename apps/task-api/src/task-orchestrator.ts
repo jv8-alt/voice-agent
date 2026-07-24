@@ -247,11 +247,26 @@ export class TaskOrchestrator {
           resolvedAt: null,
         };
         await this.dependencies.taskStore.saveApproval(context, approval);
-        this.paused.set(task.id, { context, task, turn, workspace, events });
-        keepLease = true;
-        await this.emitStatus(context, task.id, turn.id, 'needs_input');
         const snapshot = await this.dependencies.taskStore.getSnapshot(context, task.id);
         if (!snapshot?.snapshot.pendingApproval) throw internalError('The pending approval could not be loaded.');
+        if (handle.signal.aborted) return;
+        this.paused.set(task.id, { context, task, turn, workspace, events });
+        keepLease = true;
+        if (handle.signal.aborted) {
+          if (this.paused.has(task.id)) {
+            this.paused.delete(task.id);
+            keepLease = false;
+          }
+          return;
+        }
+        await this.emitStatus(context, task.id, turn.id, 'needs_input');
+        if (handle.signal.aborted) {
+          if (this.paused.has(task.id)) {
+            this.paused.delete(task.id);
+            keepLease = false;
+          }
+          return;
+        }
         await this.emit(context, task.id, {
           type: 'approval.required',
           eventId: pendingEventId,
@@ -347,7 +362,26 @@ export class TaskOrchestrator {
     error: ReturnType<TaskError['toProblem']>,
   ): Promise<void> {
     const turn = await this.dependencies.taskStore.getTurn(context, turnId);
-    if (turn?.status === 'working') {
+    if (turn?.status === 'needs_input') {
+      const snapshot = await this.dependencies.taskStore.getSnapshot(context, taskId);
+      if (snapshot?.snapshot.pendingApproval) {
+        await this.dependencies.taskStore.resolveApproval(
+          context,
+          snapshot.snapshot.pendingApproval.id,
+          'superseded',
+        );
+      }
+      const paused = this.paused.get(taskId);
+      if (paused) {
+        this.paused.delete(taskId);
+        this.dependencies.runRegistry.end(taskId);
+        await this.dependencies.workspaceProvider.release(paused.workspace.leaseId);
+      }
+      // needs_input → failed is illegal; resume working first, then fail.
+      await this.dependencies.taskStore.updateTurnStatus(context, turnId, 'working');
+      await this.dependencies.taskStore.updateTurnStatus(context, turnId, 'failed');
+      await this.emitStatus(context, taskId, turnId, 'failed');
+    } else if (turn?.status === 'working') {
       await this.dependencies.taskStore.updateTurnStatus(context, turnId, 'failed');
       await this.emitStatus(context, taskId, turnId, 'failed');
     }
