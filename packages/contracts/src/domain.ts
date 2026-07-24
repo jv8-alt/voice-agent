@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TaskErrorProblemSchema } from './errors.js';
-import { TaskStatusSchema } from './status.js';
+import { TurnStatusSchema } from './status.js';
 
 /** How a turn's input was captured. Voice (`ptt`/`handsfree`) is the demo's primary path; `typing` is a functional fallback. */
 export const TurnModeSchema = z.enum(['ptt', 'handsfree', 'typing']);
@@ -10,22 +10,29 @@ const timestamp = () => z.string().datetime();
 const id = () => z.string().min(1);
 
 /**
- * A unit of work created on a fixture workspace. One Codex thread is
- * reused across a task's turns; `agentThreadId` is unset until the first
- * `CodingAgent.plan()` call establishes it.
+ * Server-only task record. One coding-agent thread is reused across a task's
+ * turns; `agentThreadId` is unset until the first plan establishes it.
  */
-export const TaskSchema = z.object({
+export const TaskRecordSchema = z.object({
   id: id(),
   actorId: id(),
   workspaceId: id(),
-  fixtureId: id(),
   title: z.string().min(1),
-  status: TaskStatusSchema,
   agentThreadId: z.string().min(1).nullable(),
   createdAt: timestamp(),
   updatedAt: timestamp(),
 });
-export type Task = z.infer<typeof TaskSchema>;
+export type TaskRecord = z.infer<typeof TaskRecordSchema>;
+
+/** Browser-safe task summary. Status is derived from the latest turn. */
+export const TaskViewSchema = z.object({
+  id: id(),
+  title: z.string().min(1),
+  status: TurnStatusSchema,
+  createdAt: timestamp(),
+  updatedAt: timestamp(),
+}).strict();
+export type TaskView = z.infer<typeof TaskViewSchema>;
 
 /** One user submission (voice or typed) within a task. */
 export const TurnSchema = z.object({
@@ -33,7 +40,9 @@ export const TurnSchema = z.object({
   taskId: id(),
   mode: TurnModeSchema,
   text: z.string().min(1),
+  status: TurnStatusSchema,
   createdAt: timestamp(),
+  updatedAt: timestamp(),
 });
 export type Turn = z.infer<typeof TurnSchema>;
 
@@ -45,6 +54,13 @@ export const ProposedActionSchema = z.object({
   command: z.string().optional(),
 });
 export type ProposedAction = z.infer<typeof ProposedActionSchema>;
+
+/** Sanitized action information safe for browser disclosure. */
+export const ActionViewSchema = z.object({
+  kind: ProposedActionSchema.shape.kind,
+  summary: z.string().min(1),
+}).strict();
+export type ActionView = z.infer<typeof ActionViewSchema>;
 
 /**
  * Adapter-agnostic, normalized event stream emitted by a {@link CodingAgent}.
@@ -69,7 +85,7 @@ export type CodingEvent = z.infer<typeof CodingEventSchema>;
 
 /**
  * Coarse, browser-facing progress phase. Deliberately distinct from
- * {@link TaskStatusSchema}: `understood` marks a confirmed read-only plan
+ * {@link TurnStatusSchema}: `understood` marks a confirmed read-only plan
  * (no `queued` phase is ever shown to the browser).
  */
 export const ExecutiveUpdatePhaseSchema = z.enum([
@@ -94,14 +110,31 @@ export const ExecutiveUpdateSchema = z.object({
 export type ExecutiveUpdate = z.infer<typeof ExecutiveUpdateSchema>;
 
 /** A pending sensitive-action pause raised by the {@link ActionRiskEvaluator}. */
-export const ApprovalRequestSchema = z.object({
+export const ApprovalStatusSchema = z.enum(['pending', 'approved', 'rejected', 'superseded']);
+export type ApprovalStatus = z.infer<typeof ApprovalStatusSchema>;
+
+/** Internal durable approval record. */
+export const ApprovalRecordSchema = z.object({
   id: id(),
   taskId: id(),
   turnId: id(),
   reason: z.string().min(1),
   actions: z.array(ProposedActionSchema).min(1),
+  status: ApprovalStatusSchema,
   createdAt: timestamp(),
+  resolvedAt: timestamp().nullable(),
 });
+export type ApprovalRecord = z.infer<typeof ApprovalRecordSchema>;
+
+/** Pending approval disclosure safe for browser transports. */
+export const ApprovalRequestSchema = z.object({
+  id: id(),
+  taskId: id(),
+  turnId: id(),
+  reason: z.string().min(1),
+  actions: z.array(ActionViewSchema).min(1),
+  createdAt: timestamp(),
+}).strict();
 export type ApprovalRequest = z.infer<typeof ApprovalRequestSchema>;
 
 /** Private, technical record of what the agent actually did; never sent to the browser directly. */
@@ -121,9 +154,16 @@ export type TechnicalSummary = z.infer<typeof TechnicalSummarySchema>;
  * last event ID it needs for resume).
  */
 export const TaskSnapshotSchema = z.object({
-  task: TaskSchema,
+  task: TaskViewSchema,
   turns: z.array(TurnSchema),
   updates: z.array(ExecutiveUpdateSchema),
   pendingApproval: ApprovalRequestSchema.nullable(),
 });
 export type TaskSnapshot = z.infer<typeof TaskSnapshotSchema>;
+
+/** Atomically captured snapshot and its replay cursor. */
+export const SnapshotEnvelopeSchema = z.object({
+  snapshot: TaskSnapshotSchema,
+  lastEventId: z.string().regex(/^(0|[1-9][0-9]*)$/).nullable(),
+});
+export type SnapshotEnvelope = z.infer<typeof SnapshotEnvelopeSchema>;

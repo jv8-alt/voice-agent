@@ -15,7 +15,7 @@ const sampleEvents: readonly CodingEvent[] = [
  * invariants that must hold regardless of the model: every produced
  * update/summary validates against its pinned schema, and the coarse
  * `ExecutiveUpdatePhase` mapping in `summarizeOutcome` agrees with the
- * `TaskStatus` it was given (the "raw agent/tool output must never leak
+ * `TurnStatus` it was given (the "raw agent/tool output must never leak
  * past this boundary" property is a semantic guarantee of the real
  * model-backed adapter and is out of scope for a structural conformance
  * suite; E1 verifies it against the concrete adapter).
@@ -39,7 +39,7 @@ export function runExecutivePresenterConformance(
       ['completed', 'completed'],
       ['failed', 'failed'],
       ['cancelled', 'cancelled'],
-    ] as const)('summarizeOutcome() maps TaskStatus "%s" to executive phase "%s"', async (status, phase) => {
+    ] as const)('summarizeOutcome() maps TurnStatus "%s" to executive phase "%s"', async (status, phase) => {
       const result = await presenter.summarizeOutcome({ taskId: 'task-1', turnId: 'turn-1', events: sampleEvents, status });
       expect(ExecutiveUpdatePhaseSchema.safeParse(result.update.phase).success).toBe(true);
       expect(result.update.phase).toBe(phase);

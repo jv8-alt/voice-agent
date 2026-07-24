@@ -7,7 +7,6 @@ import {
   internalError,
   invalidInputError,
   missingResourceError,
-  unsupportedFixtureError,
 } from './errors.js';
 
 describe('pinned error constructors', () => {
@@ -15,7 +14,6 @@ describe('pinned error constructors', () => {
     [invalidInputError, 'invalid_input', false],
     [missingResourceError, 'not_found', false],
     [conflictError, 'conflict', false],
-    [unsupportedFixtureError, 'unsupported_fixture', false],
     [dependencyUnavailableError, 'dependency_unavailable', true],
     [internalError, 'internal', false],
   ] as const)('%# produces code %s with default retryable %s', (factory, code, retryable) => {
@@ -72,5 +70,15 @@ describe('TaskErrorProblemSchema', () => {
       requestId: 'r1',
     });
     expect(result.success).toBe(false);
+  });
+
+  it('rejects non-JSON-safe public details', () => {
+    expect(TaskErrorProblemSchema.safeParse({
+      code: 'internal',
+      message: 'x',
+      retryable: false,
+      requestId: 'r1',
+      details: { cause: new Date() },
+    }).success).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import type { AcquireWorkspaceInput, WorkspaceLease, WorkspaceProvider } from '.
 
 const BASE_PATH = '/tmp/fake-workspaces';
 
-function assertNoPathTraversal(field: 'taskId' | 'fixtureId', value: string): void {
+function assertNoPathTraversal(field: 'taskId' | 'workspaceId', value: string): void {
   if (value.split(/[/\\]/).includes('..') || value.includes('\0')) {
     throw invalidInputError(`"${field}" must not contain a path-traversal segment.`, {
       details: { field, value },
@@ -23,7 +23,7 @@ export class InMemoryFakeWorkspaceProvider implements WorkspaceProvider {
 
   async acquire(input: AcquireWorkspaceInput): Promise<WorkspaceLease> {
     assertNoPathTraversal('taskId', input.taskId);
-    assertNoPathTraversal('fixtureId', input.fixtureId);
+    assertNoPathTraversal('workspaceId', input.workspaceId);
 
     const leaseId = randomUUID();
     this.leases.add(leaseId);

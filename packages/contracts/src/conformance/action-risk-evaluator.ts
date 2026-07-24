@@ -38,11 +38,10 @@ export function runActionRiskEvaluatorConformance(
       expect(result.level).toBe('safe');
     });
 
-    it('gives every "sensitive" assessment at least one reason', async () => {
+    it('classifies a pinned destructive command as sensitive with a reason', async () => {
       const result = await evaluator.evaluate({ taskId: 'task-1', turnId: 'turn-1', actions: [destructiveAction] });
-      if (result.level === 'sensitive') {
-        expect(result.reasons.length).toBeGreaterThan(0);
-      }
+      expect(result.level).toBe('sensitive');
+      expect(result.reasons.length).toBeGreaterThan(0);
     });
 
     it('is deterministic for the same input', async () => {

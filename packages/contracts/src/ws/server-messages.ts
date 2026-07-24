@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import {
   ApprovalRequestSchema,
+  ActionViewSchema,
   ExecutiveUpdateSchema,
-  ProposedActionSchema,
-  TaskSchema,
+  TaskViewSchema,
   TaskSnapshotSchema,
   TurnSchema,
 } from '../domain.js';
 import { TaskErrorProblemSchema } from '../errors.js';
-import { TaskStatusSchema } from '../status.js';
+import { TurnStatusSchema } from '../status.js';
 import { EventIdSchema } from './event-id.js';
 
 const taskId = () => z.string().min(1);
@@ -28,16 +28,16 @@ export type ConnectionReadyMessage = z.infer<typeof ConnectionReadyMessageSchema
 /** Full state sent immediately after a successful `task.subscribe`. */
 export const TaskSnapshotMessageSchema = z.object({
   type: z.literal('task.snapshot'),
-  eventId: EventIdSchema,
   taskId: taskId(),
   snapshot: TaskSnapshotSchema,
+  lastEventId: EventIdSchema.nullable(),
 });
 export type TaskSnapshotMessage = z.infer<typeof TaskSnapshotMessageSchema>;
 
 export const TaskCreatedMessageSchema = z.object({
   type: z.literal('task.created'),
   eventId: EventIdSchema,
-  task: TaskSchema,
+  task: TaskViewSchema,
 });
 export type TaskCreatedMessage = z.infer<typeof TaskCreatedMessageSchema>;
 
@@ -54,7 +54,7 @@ export const IntentConfirmedMessageSchema = z.object({
   eventId: EventIdSchema,
   taskId: taskId(),
   turnId: turnId(),
-  actions: z.array(ProposedActionSchema),
+  actions: z.array(ActionViewSchema),
 });
 export type IntentConfirmedMessage = z.infer<typeof IntentConfirmedMessageSchema>;
 
@@ -78,16 +78,18 @@ export const ApprovalResolvedMessageSchema = z.object({
   taskId: taskId(),
   approvalId: z.string().min(1),
   decision: z.enum(['approve', 'reject']),
+  commandId: z.string().min(1),
 });
 export type ApprovalResolvedMessage = z.infer<typeof ApprovalResolvedMessageSchema>;
 
-export const TaskStatusChangedMessageSchema = z.object({
-  type: z.literal('task.status_changed'),
+export const TurnStatusChangedMessageSchema = z.object({
+  type: z.literal('turn.status_changed'),
   eventId: EventIdSchema,
   taskId: taskId(),
-  status: TaskStatusSchema,
+  turnId: turnId(),
+  status: TurnStatusSchema,
 });
-export type TaskStatusChangedMessage = z.infer<typeof TaskStatusChangedMessageSchema>;
+export type TurnStatusChangedMessage = z.infer<typeof TurnStatusChangedMessageSchema>;
 
 export const TaskCompletedMessageSchema = z.object({
   type: z.literal('task.completed'),
@@ -103,6 +105,7 @@ export const TaskCancelledMessageSchema = z.object({
   eventId: EventIdSchema,
   taskId: taskId(),
   turnId: turnId().nullable(),
+  commandId: z.string().min(1),
 });
 export type TaskCancelledMessage = z.infer<typeof TaskCancelledMessageSchema>;
 
@@ -159,7 +162,7 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   ProgressUpdatedMessageSchema,
   ApprovalRequiredMessageSchema,
   ApprovalResolvedMessageSchema,
-  TaskStatusChangedMessageSchema,
+  TurnStatusChangedMessageSchema,
   TaskCompletedMessageSchema,
   TaskCancelledMessageSchema,
   TaskFailedMessageSchema,
@@ -167,3 +170,18 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   ServerErrorMessageSchema,
 ]);
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
+
+/** Messages that may be persisted and replayed. */
+export const ReplayableServerMessageSchema = z.discriminatedUnion('type', [
+  TaskCreatedMessageSchema,
+  TurnCreatedMessageSchema,
+  IntentConfirmedMessageSchema,
+  ProgressUpdatedMessageSchema,
+  ApprovalRequiredMessageSchema,
+  ApprovalResolvedMessageSchema,
+  TurnStatusChangedMessageSchema,
+  TaskCompletedMessageSchema,
+  TaskCancelledMessageSchema,
+  TaskFailedMessageSchema,
+]);
+export type ReplayableServerMessage = z.infer<typeof ReplayableServerMessageSchema>;

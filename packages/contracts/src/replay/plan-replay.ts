@@ -1,11 +1,11 @@
 import type { EventId } from '../ws/event-id.js';
 import { compareEventIds } from '../ws/event-id.js';
-import type { ServerMessage } from '../ws/server-messages.js';
+import type { ReplayableServerMessage } from '../ws/server-messages.js';
 
 /** One retained event available for replay, keyed by its wire {@link EventId}. */
 export interface ReplayableEvent {
   readonly eventId: EventId;
-  readonly message: ServerMessage;
+  readonly message: ReplayableServerMessage;
 }
 
 export interface PlanReplayInput {
@@ -32,7 +32,7 @@ export interface PlanReplayInput {
 }
 
 export type PlanReplayResult =
-  | { readonly kind: 'replay'; readonly events: ServerMessage[] }
+  | { readonly kind: 'replay'; readonly events: ReplayableServerMessage[] }
   | { readonly kind: 'resync_required' };
 
 /**

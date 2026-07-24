@@ -80,6 +80,41 @@ export function runCodingAgentConformance(
       expect(last?.type === 'completed' || last?.type === 'failed').toBe(true);
     });
 
+    it('resume() continues the existing thread to a terminal event', async () => {
+      const agent = await createAgent('success');
+      const controller = new AbortController();
+      const events = await collect(
+        agent.resume({
+          taskId: 'task-1',
+          turnId: 'turn-2',
+          workspace,
+          signal: controller.signal,
+          agentThreadId: 'thread-1',
+          instructions: 'Also add a regression test',
+        }),
+      );
+      expect(events.at(-1)?.type).toBe('completed');
+    });
+
+    it('stops yielding promptly when a run is aborted mid-stream', async () => {
+      const agent = await createAgent('success');
+      const controller = new AbortController();
+      const iterator = agent.run({
+        taskId: 'task-1',
+        turnId: 'turn-1',
+        workspace,
+        signal: controller.signal,
+        agentThreadId: 'thread-1',
+      })[Symbol.asyncIterator]();
+
+      await expect(iterator.next()).resolves.toMatchObject({
+        done: false,
+        value: { type: 'tool_started' },
+      });
+      controller.abort();
+      await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined });
+    });
+
     it('surfaces a dependency outage as a typed "failed" event, not a thrown error', async () => {
       const agent = await createAgent('outage');
       const controller = new AbortController();

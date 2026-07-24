@@ -1,22 +1,32 @@
 export {
+  ActionViewSchema,
+  ApprovalRecordSchema,
   ApprovalRequestSchema,
+  ApprovalStatusSchema,
   CodingEventSchema,
   ExecutiveUpdatePhaseSchema,
   ExecutiveUpdateSchema,
   ProposedActionSchema,
-  TaskSchema,
+  SnapshotEnvelopeSchema,
+  TaskRecordSchema,
+  TaskViewSchema,
   TaskSnapshotSchema,
   TechnicalSummarySchema,
   TurnModeSchema,
   TurnSchema,
 } from './domain.js';
 export type {
+  ActionView,
+  ApprovalRecord,
   ApprovalRequest,
+  ApprovalStatus,
   CodingEvent,
   ExecutiveUpdate,
   ExecutiveUpdatePhase,
   ProposedAction,
-  Task,
+  SnapshotEnvelope,
+  TaskRecord,
+  TaskView,
   TaskSnapshot,
   TechnicalSummary,
   Turn,
@@ -27,22 +37,22 @@ export {
   TaskError,
   TaskErrorCodeSchema,
   TaskErrorProblemSchema,
+  JsonSafeValueSchema,
   conflictError,
   dependencyUnavailableError,
   internalError,
   invalidInputError,
   missingResourceError,
-  unsupportedFixtureError,
 } from './errors.js';
-export type { TaskErrorCode, TaskErrorOptions, TaskErrorProblem } from './errors.js';
+export type { JsonPrimitive, JsonSafeValue, TaskErrorCode, TaskErrorOptions, TaskErrorProblem } from './errors.js';
 
 export {
-  TaskStatusSchema,
-  canTransitionTaskStatus,
-  isActiveTaskStatus,
-  transitionTaskStatus,
+  TurnStatusSchema,
+  canTransitionTurnStatus,
+  isActiveTurnStatus,
+  transitionTurnStatus,
 } from './status.js';
-export type { TaskStatus, TransitionTaskStatusOptions } from './status.js';
+export type { TurnStatus, TransitionTurnStatusOptions } from './status.js';
 
 export * from './ports/index.js';
 
@@ -50,4 +60,3 @@ export * from './ws/index.js';
 export * from './http/index.js';
 export * from './openapi/index.js';
 export * from './replay/index.js';
-export * from './conformance/index.js';

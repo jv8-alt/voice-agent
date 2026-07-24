@@ -11,6 +11,7 @@
  * mistakes them for production or demo adapters.
  */
 export { FakeActionRiskEvaluator } from './fake-action-risk-evaluator.js';
+export { InMemoryFakeCommandReceiptStore } from './in-memory-command-receipt-store.js';
 export { FakeCodingAgent } from './fake-coding-agent.js';
 export type { FakeCodingAgentScenario } from './fake-coding-agent.js';
 export { FakeExecutivePresenter } from './fake-executive-presenter.js';

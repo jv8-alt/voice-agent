@@ -7,8 +7,8 @@ import type { TaskErrorCode } from '../errors.js';
 /**
  * Pins the HTTP status for each {@link TaskErrorCode}, per MIKADO.md's
  * design decisions ("Contracts pin 400 invalid input, 404 missing
- * task/workspace, 409 active turn or invalid state, 422 unsupported
- * fixture, 503 unavailable dependency, and 500 internal error."). T2
+ * task/workspace, 409 active turn or invalid state, 503 unavailable
+ * dependency, and 500 internal error."). T2
  * deliberately left this mapping out of the domain vocabulary; it is T3's
  * job because it is transport-specific.
  *
@@ -21,7 +21,6 @@ const TASK_ERROR_HTTP_STATUS = {
   invalid_input: 400,
   not_found: 404,
   conflict: 409,
-  unsupported_fixture: 422,
   dependency_unavailable: 503,
   internal: 500,
 } as const satisfies Record<TaskErrorCode, number>;
@@ -40,7 +39,7 @@ export function mapTaskErrorCodeToHttpStatus(code: TaskErrorCode): number {
  */
 export const TASK_ENDPOINT_ERROR_CODES = {
   'GET /tasks': ['internal'],
-  'POST /tasks': ['invalid_input', 'unsupported_fixture', 'internal'],
+  'POST /tasks': ['invalid_input', 'internal'],
   'GET /tasks/{taskId}': ['not_found', 'internal'],
   'POST /tasks/{taskId}/turns': ['invalid_input', 'not_found', 'conflict', 'internal'],
   'GET /tasks/{taskId}/events': ['invalid_input', 'not_found', 'internal'],

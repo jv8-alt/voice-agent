@@ -18,7 +18,7 @@ import { z } from 'zod';
  */
 export const EventIdSchema = z
   .string()
-  .regex(/^[0-9]+$/, 'eventId must be a base-10 non-negative integer string');
+  .regex(/^(0|[1-9][0-9]*)$/, 'eventId must be a canonical base-10 non-negative integer string');
 export type EventId = z.infer<typeof EventIdSchema>;
 
 /** Pinned ordering for {@link EventId} values: numeric, not lexicographic. */

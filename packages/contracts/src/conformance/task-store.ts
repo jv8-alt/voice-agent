@@ -1,22 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { ApprovalRecord } from '../domain.js';
 import { TaskError } from '../errors.js';
+import type { ActorContext } from '../ports/actor-context.js';
 import type { CreateTaskInput, TaskStore } from '../ports/task-store.js';
 
-const baseTask: CreateTaskInput = {
-  actorId: 'demo-user',
-  workspaceId: 'workspace-1',
-  fixtureId: 'checkout-regression',
-  title: 'Fix the checkout bug',
-};
+const actor: ActorContext = { actorId: 'actor-1' };
+const otherActor: ActorContext = { actorId: 'actor-2' };
+const baseTask: CreateTaskInput = { workspaceId: 'workspace-1', title: 'Fix checkout' };
 
-/**
- * Conformance suite for {@link TaskStore}. Covers the invariants pinned in
- * MIKADO.md's "Contract tests cover..." that are this port's
- * responsibility: invalid status transitions and missing-ID lookups.
- * (Overlapping/duplicate active turns are `TaskRunRegistry`'s invariant —
- * see `./task-run-registry.ts` — since `TaskStore` itself has no
- * "one active run" rule in its T2 contract.)
- */
 export function runTaskStoreConformance(createStore: () => TaskStore | Promise<TaskStore>): void {
   describe('TaskStore conformance', () => {
     let store: TaskStore;
@@ -25,82 +16,91 @@ export function runTaskStoreConformance(createStore: () => TaskStore | Promise<T
       store = await createStore();
     });
 
-    it('creates a task in the initial "queued" status', async () => {
-      const task = await store.createTask(baseTask);
-      expect(task.status).toBe('queued');
-      expect(task.actorId).toBe(baseTask.actorId);
-      expect(task.agentThreadId).toBeNull();
-      expect(task.id.length).toBeGreaterThan(0);
+    async function createTaskAndTurn() {
+      const task = await store.createTask(actor, baseTask);
+      const turn = await store.createTurn(actor, { taskId: task.id, mode: 'ptt', text: 'Fix it' });
+      return { task, turn };
+    }
+
+    it('hides every lookup from the wrong actor as not_found', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await expect(store.getTask(otherActor, task.id)).resolves.toBeNull();
+      await expect(store.getTurn(otherActor, turn.id)).resolves.toBeNull();
+      await expect(store.getSnapshot(otherActor, task.id)).resolves.toBeNull();
+      await expect(store.listTasks(otherActor)).resolves.toEqual([]);
     });
 
-    it('returns null for a missing task ID', async () => {
-      await expect(store.getTask('does-not-exist')).resolves.toBeNull();
+    it('derives a task view from the latest turn', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await store.updateTurnStatus(actor, turn.id, 'working');
+      const [view] = await store.listTasks(actor);
+      expect(view).toMatchObject({ id: task.id, status: 'working' });
+      expect(view).not.toHaveProperty('actorId');
+      expect(view).not.toHaveProperty('agentThreadId');
     });
 
-    it('returns null for a missing turn ID', async () => {
-      await expect(store.getTurn('does-not-exist')).resolves.toBeNull();
+    it('allows a queued follow-up after a terminal turn without mutating it', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await store.updateTurnStatus(actor, turn.id, 'working');
+      const terminal = await store.updateTurnStatus(actor, turn.id, 'completed');
+      const followUp = await store.createTurn(actor, { taskId: task.id, mode: 'typing', text: 'Add tests' });
+      expect(followUp.status).toBe('queued');
+      expect(await store.getTurn(actor, turn.id)).toEqual(terminal);
     });
 
-    it('lists only tasks belonging to the requested actor', async () => {
-      const mine = await store.createTask(baseTask);
-      await store.createTask({ ...baseTask, actorId: 'someone-else' });
-
-      const tasks = await store.listTasks(baseTask.actorId);
-      expect(tasks.map((task) => task.id)).toEqual([mine.id]);
+    it('rejects overlapping active turns and illegal terminal transitions', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await expect(
+        store.createTurn(actor, { taskId: task.id, mode: 'typing', text: 'Overlap' }),
+      ).rejects.toMatchObject({ code: 'conflict' });
+      await store.updateTurnStatus(actor, turn.id, 'working');
+      await store.updateTurnStatus(actor, turn.id, 'cancelled');
+      await expect(store.updateTurnStatus(actor, turn.id, 'working')).rejects.toBeInstanceOf(TaskError);
     });
 
-    it('applies a legal status transition and persists it', async () => {
-      const task = await store.createTask(baseTask);
-      const updated = await store.updateTaskStatus(task.id, 'working');
-      expect(updated.status).toBe('working');
-
-      const reloaded = await store.getTask(task.id);
-      expect(reloaded?.status).toBe('working');
+    it('persists approvals and rejects stale resolution', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await store.updateTurnStatus(actor, turn.id, 'working');
+      await store.updateTurnStatus(actor, turn.id, 'needs_input');
+      const approval: ApprovalRecord = {
+        id: 'approval-1',
+        taskId: task.id,
+        turnId: turn.id,
+        reason: 'Destructive action',
+        actions: [{ kind: 'exec', summary: 'Delete generated files', command: 'rm -r dist' }],
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+      };
+      await store.saveApproval(actor, approval);
+      expect((await store.getSnapshot(actor, task.id))?.snapshot.pendingApproval?.actions).toEqual([
+        { kind: 'exec', summary: 'Delete generated files' },
+      ]);
+      await expect(store.resolveApproval(actor, approval.id, 'approved')).resolves.toMatchObject({
+        status: 'approved',
+      });
+      await expect(store.resolveApproval(actor, approval.id, 'rejected')).rejects.toMatchObject({
+        code: 'conflict',
+      });
     });
 
-    it('rejects an illegal status transition with a "conflict" TaskError', async () => {
-      const task = await store.createTask(baseTask);
-      await store.updateTaskStatus(task.id, 'working');
-      await store.updateTaskStatus(task.id, 'completed');
+    it('cancels the paused turn when its approval is rejected', async () => {
+      const { task, turn } = await createTaskAndTurn();
+      await store.updateTurnStatus(actor, turn.id, 'working');
+      await store.updateTurnStatus(actor, turn.id, 'needs_input');
+      await store.saveApproval(actor, {
+        id: 'approval-reject',
+        taskId: task.id,
+        turnId: turn.id,
+        reason: 'Destructive action',
+        actions: [{ kind: 'exec', summary: 'Delete generated files', command: 'rm -r dist' }],
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+      });
 
-      let caught: unknown;
-      try {
-        await store.updateTaskStatus(task.id, 'working');
-      } catch (error) {
-        caught = error;
-      }
-
-      expect(caught).toBeInstanceOf(TaskError);
-      expect((caught as TaskError).code).toBe('conflict');
-    });
-
-    it('rejects a status transition for a missing task ID', async () => {
-      let caught: unknown;
-      try {
-        await store.updateTaskStatus('does-not-exist', 'working');
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toBeInstanceOf(TaskError);
-      expect((caught as TaskError).code).toBe('not_found');
-    });
-
-    it('records the agent thread ID established by the first plan() call', async () => {
-      const task = await store.createTask(baseTask);
-      const updated = await store.setAgentThreadId(task.id, 'thread-1');
-      expect(updated.agentThreadId).toBe('thread-1');
-
-      const reloaded = await store.getTask(task.id);
-      expect(reloaded?.agentThreadId).toBe('thread-1');
-    });
-
-    it('creates and lists turns for a task in creation order', async () => {
-      const task = await store.createTask(baseTask);
-      const first = await store.createTurn({ taskId: task.id, mode: 'ptt', text: 'Fix the bug' });
-      const second = await store.createTurn({ taskId: task.id, mode: 'typing', text: 'Also add a test' });
-
-      const turns = await store.listTurns(task.id);
-      expect(turns.map((turn) => turn.id)).toEqual([first.id, second.id]);
+      await store.resolveApproval(actor, 'approval-reject', 'rejected');
+      await expect(store.getTurn(actor, turn.id)).resolves.toMatchObject({ status: 'cancelled' });
     });
   });
 }

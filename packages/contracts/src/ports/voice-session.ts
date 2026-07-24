@@ -12,9 +12,9 @@ export interface ConnectVoiceSessionInput {
 
 /**
  * Browser-side wrapper around a realtime voice connection. Push-to-talk
- * commits manually via `stopTurn()`; hands-free relies on VAD but the
- * resulting transcript is still reviewed before being submitted as a task
- * or turn, per MIKADO.md's voice design decision.
+ * commits manually via `stopTurn()` and hands-free commits on VAD silence.
+ * The next final transcript is submitted immediately as a task or turn;
+ * there is no transcript-review state in this contract.
  *
  * Demo adapter: OpenAI Realtime over WebRTC via the OpenAI Agents SDK
  * (`packages/voice-openai`). Production adapter: the same or a different
