@@ -1,9 +1,29 @@
 import type { ServerMessage } from "@voice-agent/contracts";
-import { describe, expect, it } from "vitest";
-import { TaskSocketClient } from "./task-client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TaskRestClient, TaskSocketClient } from "./task-client";
 import { initialTaskState, reduceTaskMessage } from "./task-reducer";
 
 const now = "2026-07-24T19:58:00.000Z";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("task REST client", () => {
+  it("calls the browser fetch function with its required global receiver", async () => {
+    const browserFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) throw new TypeError("Illegal invocation");
+      return Promise.resolve(new Response(JSON.stringify({
+        clientSecret: "test-secret",
+        expiresAt: now,
+      })));
+    });
+    vi.stubGlobal("fetch", browserFetch);
+
+    await expect(new TaskRestClient("http://tasks").createVoiceClientSecret())
+      .resolves.toMatchObject({ clientSecret: "test-secret" });
+  });
+});
 
 describe("task replay reducer", () => {
   it("reconstructs public task state from replayable events", () => {

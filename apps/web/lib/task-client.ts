@@ -19,7 +19,10 @@ async function parsed<T>(response: Response): Promise<T> {
 }
 
 export class TaskRestClient {
-  constructor(private readonly baseUrl = "", private readonly request: Fetch = globalThis.fetch) {}
+  constructor(
+    private readonly baseUrl = "",
+    private readonly request: Fetch = (...args) => globalThis.fetch(...args),
+  ) {}
 
   list() {
     return this.request(`${this.baseUrl}/tasks`).then((response) => parsed<GetTasksResponse>(response));
