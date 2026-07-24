@@ -106,8 +106,15 @@ export function TaskThread({
             <button onClick={() => setMode("typing")} aria-label="Switch to typing">⌨</button>
             <button
               className="mic primary"
-              onPointerDown={() => voice?.startTurn(mode)}
+              onPointerDown={(event) => {
+                if (mode === "ptt") {
+                  event.preventDefault();
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }
+                voice?.startTurn(mode);
+              }}
               onPointerUp={() => { if (mode === "ptt") voice?.stopTurn(); }}
+              onPointerCancel={() => { if (mode === "ptt") voice?.stopTurn(); }}
             >
               {mode === "handsfree" ? "Listening hands-free" : "Hold to talk"}
             </button>
