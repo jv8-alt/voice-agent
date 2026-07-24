@@ -7,6 +7,7 @@
   "scripts": {
     "build": "pnpm -r --if-present build",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "demo": "pnpm --parallel --filter @voice-agent/task-api --filter @voice-agent/web dev",
     "dev": "pnpm -r --parallel --if-present dev",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",

@@ -7,18 +7,17 @@ repositories. The demo is being built from the interaction reference in
 
 ## Current status
 
-The repository currently contains the workspace foundation, interactive HTML
-mock, shared `@voice-agent/contracts` package, and the injectable Fastify
-application shell. Process-local task, receipt, replay, and active-run adapters
-are also available for later API wiring. Task routes, WebSocket orchestration,
-Next.js, OpenAI voice, and Codex adapters will be added by the nodes listed in
-`MIKADO.md`.
+The demo is runnable end to end: Next.js submits voice or typed turns to
+Fastify, follows resumable task events, and controls cancellation and approval.
+Fastify composes process-local state, disposable fixture workspaces, Codex,
+executive summaries, risk evaluation, and short-lived OpenAI Realtime sessions.
 
 ## Prerequisites
 
 - Node.js 22 or newer
 - pnpm
-- Python 3 only if previewing the standalone HTML mock
+- A browser with microphone access
+- An OpenAI API key with Codex, Agents, and Realtime access for live runs
 
 ## Set up the workspace
 
@@ -55,15 +54,14 @@ Open [http://localhost:4173/mock.html](http://localhost:4173/mock.html).
 
 ## Run the application
 
-The Fastify shell is available for injection tests but has no task routes or
-standalone startup entry point until F2. Once the runnable applications land,
-the canonical command will be:
+Set `OPENAI_API_KEY` in `.env`, keep `DEMO_REPO_ID=demo-repo`, then start both
+applications with one command:
 
 ```sh
-pnpm dev
+pnpm demo
 ```
 
-The intended local endpoints are:
+Open [http://localhost:3000](http://localhost:3000). The local endpoints are:
 
 - Web app: `http://localhost:3000`
 - Task API: `http://localhost:3001`
@@ -72,6 +70,10 @@ The intended local endpoints are:
 The browser uses REST for task creation and snapshots, the Task WebSocket for
 agent events, cancellation, and sensitive-action approval, and OpenAI Realtime
 WebRTC for microphone input and spoken responses.
+
+Microphone capture works on `localhost`. Any remote deployment must use HTTPS
+(and `wss:` for the socket) or browsers will deny microphone access. Grant the
+browser microphone prompt before starting push-to-talk or hands-free mode.
 
 Final push-to-talk transcripts are submitted immediately on release; final
 hands-free transcripts are submitted immediately after VAD silence. There is no
@@ -84,7 +86,41 @@ transcript review step in the shared voice contract.
 | `OPENAI_API_KEY` | Task API only | OpenAI Realtime token minting, Codex, and executive summaries |
 | `PORT` | Task API | Required Fastify port from `1` through `65535` |
 | `WEB_ORIGIN` | Task API | Required exact HTTP(S) browser origin, such as `http://localhost:3000` |
-| `DEMO_REPO_ID` | Task API | Local fixture repository selected for new tasks |
+| `DEMO_REPO_ID` | Task API | Opaque server-side workspace selector; use `demo-repo` |
+| `NEXT_PUBLIC_TASK_API_URL` | Web (optional) | API origin; defaults to `http://localhost:3001` |
+
+`workspaceId` stays server-side. No repository selector, fixture path, or
+`fixtureId` is accepted from or returned to the browser.
+
+## Golden demo
+
+1. Run `pnpm demo` and open `http://localhost:3000`.
+2. Hold **Push to talk**, request a small change to the greeting, then release.
+   The final transcript submits immediately.
+3. For a deterministic sensitive path, request a dependency install or broad
+   delete; inspect the proposed action and approve or reject it.
+4. Start another task and select **Cancel task** while it is working.
+5. Return home to switch between process-local recent tasks.
+
+The bundled fixture path is tested without live credentials:
+
+```sh
+pnpm --filter @voice-agent/task-api test -- fixture-e2e
+```
+
+That test edits a disposable `demo-repo` copy, runs its Node test, verifies the
+task completes, and confirms the source fixture is unchanged.
+
+## Adapter map
+
+| Boundary | Demo implementation | Production replacement |
+| --- | --- | --- |
+| Task state/replay/receipts | `@voice-agent/task-store-memory` | Durable transactional database and event log |
+| Workspace | `@voice-agent/workspace-fixture` | Auth-scoped remote sandbox/worktree provider |
+| Coding agent | `@voice-agent/coding-agent-codex` | Same port with production sandbox policy |
+| Executive output/risk | `@voice-agent/executive-openai` | Audited model gateway and organization policy |
+| Browser voice | `@voice-agent/voice-openai` | Realtime provider behind `VoiceSession` |
+| Authentication | Fixed `demo-user` | Request-derived actor identity and authorization |
 
 ## Demo limitations
 
@@ -103,8 +139,11 @@ transcript review step in the shared voice contract.
   normalized proposed actions. Approved runs and follow-ups resume that thread
   with workspace-write access, still without network access; cancellation is
   forwarded through the SDK's `AbortSignal`.
-- Codex adapter tests use an injected fake client and need no API key. Live
-  Codex execution is intentionally opt-in at application runtime.
+- Automated tests inject fake AI/voice edges and need no API key. `pnpm demo`
+  uses the live Codex, OpenAI summary, and Realtime adapters.
+- The browser client relies on server runtime schema validation and frozen DTO
+  types; the frozen contracts runtime barrel imports Node crypto and is not
+  browser-bundleable.
 - Authentication is a fixed localhost demo identity.
 - Typing is a basic fallback; push-to-talk and hands-free are the primary paths.
 
