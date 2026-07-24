@@ -155,6 +155,60 @@ describe("task thread", () => {
     expect(screen.queryByRole("button", { name: "Cancel task" })).not.toBeInTheDocument();
   });
 
+  it("renders each agent response immediately after its matching user turn", () => {
+    const conversation = envelope("completed");
+    conversation.snapshot.turns = [
+      {
+        id: "turn-1",
+        taskId: "task-1",
+        mode: "ptt",
+        text: "How many files are in the repo?",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "turn-2",
+        taskId: "task-1",
+        mode: "ptt",
+        text: "What are those files?",
+        status: "completed",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+    conversation.snapshot.updates = [
+      {
+        taskId: "task-1",
+        turnId: "turn-1",
+        phase: "completed",
+        headline: "The repository contains 3 files",
+        createdAt: now,
+      },
+      {
+        taskId: "task-1",
+        turnId: "turn-2",
+        phase: "completed",
+        headline: "The files are package.json, greeting.js, and greeting.test.js",
+        createdAt: `${now}-2`,
+      },
+    ];
+    render(<TaskThread envelope={conversation} />);
+
+    const orderedMessages = [
+      screen.getByText("How many files are in the repo?"),
+      screen.getByText("The repository contains 3 files"),
+      screen.getByText("What are those files?"),
+      screen.getByText("The files are package.json, greeting.js, and greeting.test.js"),
+    ];
+    for (let index = 0; index < orderedMessages.length - 1; index += 1) {
+      expect(
+        orderedMessages[index]!.compareDocumentPosition(orderedMessages[index + 1]!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+  });
+
   it("keeps typing as a functional fallback", async () => {
     const user = userEvent.setup();
     const submit = vi.fn();

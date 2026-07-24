@@ -88,6 +88,7 @@ export function TaskThread({
 
   const approval = envelope.snapshot.pendingApproval;
   const latest = envelope.snapshot.turns.at(-1);
+  const turnIds = new Set(envelope.snapshot.turns.map(({ id }) => id));
 
   return (
     <main className="thread-shell">
@@ -104,9 +105,22 @@ export function TaskThread({
 
       <section className="messages" aria-label="Task activity">
         {envelope.snapshot.turns.map((turn) => (
-          <article className="user-message" key={turn.id}>{turn.text}</article>
+          <React.Fragment key={turn.id}>
+            <article className="user-message">{turn.text}</article>
+            {envelope.snapshot.updates
+              .filter((update) => update.turnId === turn.id)
+              .map((update) => (
+                <article
+                  className={`agent-card ${update.phase}`}
+                  key={`${update.turnId}-${update.createdAt}`}
+                >
+                  <strong>{update.headline}</strong>
+                  {update.detail && <p>{update.detail}</p>}
+                </article>
+              ))}
+          </React.Fragment>
         ))}
-        {envelope.snapshot.updates.map((update) => (
+        {envelope.snapshot.updates.filter((update) => !turnIds.has(update.turnId)).map((update) => (
           <article className={`agent-card ${update.phase}`} key={`${update.turnId}-${update.createdAt}`}>
             <strong>{update.headline}</strong>
             {update.detail && <p>{update.detail}</p>}
