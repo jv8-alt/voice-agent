@@ -5,9 +5,10 @@ import type {
   SnapshotEnvelope,
   TurnMode,
   VoiceSession,
+  VoiceSessionMode,
 } from "@voice-agent/contracts";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type SubmitTurn = (input: { mode: TurnMode; text: string }) => void | Promise<void>;
 
@@ -38,11 +39,21 @@ export function TaskThread({
   const [mode, setMode] = useState<TurnMode>("ptt");
   const [draft, setDraft] = useState("");
   const [partial, setPartial] = useState("");
+  // Final transcripts can arrive after the composer mode changes; label the
+  // turn with the mode that was active when capture started.
+  const captureModeRef = useRef<VoiceSessionMode>("ptt");
+
+  const beginVoiceCapture = (captureMode: VoiceSessionMode) => {
+    captureModeRef.current = captureMode;
+    voice?.startTurn(captureMode);
+  };
 
   useEffect(() => voice?.onTranscript(({ final, text }) => {
     setPartial(final ? "" : text);
-    if (final && text.trim()) void onSubmit({ mode, text: text.trim() });
-  }), [mode, onSubmit, voice]);
+    if (final && text.trim()) {
+      void onSubmit({ mode: captureModeRef.current, text: text.trim() });
+    }
+  }), [onSubmit, voice]);
 
   const approval = envelope.snapshot.pendingApproval;
   const latest = envelope.snapshot.turns.at(-1);
@@ -70,7 +81,10 @@ export function TaskThread({
             {update.detail && <p>{update.detail}</p>}
           </article>
         ))}
-        {latest?.status === "working" && (
+        {latest?.status === "working" &&
+          !envelope.snapshot.updates.some(
+            (update) => update.turnId === latest.id && update.phase === "working",
+          ) && (
           <article className="agent-card working">
             <strong>Working on it</strong><div className="progress" />
           </article>
@@ -103,11 +117,23 @@ export function TaskThread({
           </form>
         ) : (
           <div className="voice-controls">
-            <button onClick={() => setMode("typing")} aria-label="Switch to typing">⌨</button>
+            <button
+              onClick={() => {
+                voice?.stopTurn();
+                setMode("typing");
+              }}
+              aria-label="Switch to typing"
+            >⌨</button>
             <button
               className="mic primary"
-              onPointerDown={() => voice?.startTurn(mode)}
+              onPointerDown={(event) => {
+                if (mode !== "ptt") return;
+                event.preventDefault();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                beginVoiceCapture(mode);
+              }}
               onPointerUp={() => { if (mode === "ptt") voice?.stopTurn(); }}
+              onPointerCancel={() => { if (mode === "ptt") voice?.stopTurn(); }}
             >
               {mode === "handsfree" ? "Listening hands-free" : "Hold to talk"}
             </button>
@@ -115,8 +141,9 @@ export function TaskThread({
               aria-pressed={mode === "handsfree"}
               onClick={() => {
                 const next = mode === "handsfree" ? "ptt" : "handsfree";
+                voice?.stopTurn();
                 setMode(next);
-                if (next === "handsfree") voice?.startTurn(next);
+                if (next === "handsfree") beginVoiceCapture(next);
               }}
             >∞</button>
           </div>
