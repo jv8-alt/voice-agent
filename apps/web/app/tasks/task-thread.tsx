@@ -15,6 +15,7 @@ type SubmitTurn = (input: { mode: TurnMode; text: string }) => void | Promise<vo
 export interface TaskThreadProps {
   envelope: SnapshotEnvelope;
   voice?: VoiceSession;
+  initialMode?: TurnMode;
   onSubmit?: SubmitTurn;
   onCancel?: () => void;
   onResolveApproval?: (approval: ApprovalRequest, decision: "approve" | "reject") => void;
@@ -32,11 +33,12 @@ const statusLabel = {
 export function TaskThread({
   envelope,
   voice,
+  initialMode = "ptt",
   onSubmit = () => {},
   onCancel = () => {},
   onResolveApproval = () => {},
 }: TaskThreadProps) {
-  const [mode, setMode] = useState<TurnMode>("ptt");
+  const [mode, setMode] = useState<TurnMode>(initialMode);
   const [draft, setDraft] = useState("");
   const [partial, setPartial] = useState("");
   // Final transcripts can arrive after the composer mode changes; label the

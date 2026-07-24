@@ -108,3 +108,9 @@ h1 { margin: 0; font-size: 26px; letter-spacing: -.03em; }
 .live-transcript { margin: 0 0 10px; color: var(--muted); }
 .cancel { margin-top: 8px; color: #a52631; background: transparent; }
 .approval-actions { justify-content: flex-end; margin-top: 14px; }
+.empty-tasks, .loading { padding: 24px; color: var(--muted); text-align: center; }
+.experience-error {
+  position: fixed; top: 8px; left: 50%; z-index: 10; width: min(92%, 520px);
+  margin: 0; padding: 10px 14px; transform: translateX(-50%);
+  border-radius: 12px; background: #fff4dc; color: #7a4804; text-align: center;
+}

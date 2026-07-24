@@ -1,46 +1,51 @@
-import {
-  ClientMessageSchema,
-  CreateTaskResponseSchema,
-  CreateTurnResponseSchema,
-  GetTaskResponseSchema,
-  GetTasksResponseSchema,
-  ServerMessageSchema,
-  type ClientMessage,
-  type CreateTaskRequest,
-  type CreateTurnRequest,
-  type ServerMessage,
+import type {
+  ClientMessage,
+  CreateTaskRequest,
+  CreateTaskResponse,
+  CreateTurnRequest,
+  CreateTurnResponse,
+  CreateVoiceClientSecretResponse,
+  GetTaskResponse,
+  GetTasksResponse,
+  ServerMessage,
 } from "@voice-agent/contracts";
 
 type Fetch = typeof globalThis.fetch;
 
-async function parsed<T>(response: Response, schema: { parse(value: unknown): T }): Promise<T> {
-  const body: unknown = await response.json();
+async function parsed<T>(response: Response): Promise<T> {
+  const body = await response.json() as T;
   if (!response.ok) throw new Error(`Task API request failed (${response.status})`);
-  return schema.parse(body);
+  return body;
 }
 
 export class TaskRestClient {
   constructor(private readonly baseUrl = "", private readonly request: Fetch = globalThis.fetch) {}
 
   list() {
-    return this.request(`${this.baseUrl}/tasks`).then((response) => parsed(response, GetTasksResponseSchema));
+    return this.request(`${this.baseUrl}/tasks`).then((response) => parsed<GetTasksResponse>(response));
   }
 
   get(taskId: string) {
     return this.request(`${this.baseUrl}/tasks/${encodeURIComponent(taskId)}`)
-      .then((response) => parsed(response, GetTaskResponseSchema));
+      .then((response) => parsed<GetTaskResponse>(response));
   }
 
   create(input: CreateTaskRequest) {
     return this.request(`${this.baseUrl}/tasks`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
-    }).then((response) => parsed(response, CreateTaskResponseSchema));
+    }).then((response) => parsed<CreateTaskResponse>(response));
   }
 
   createTurn(taskId: string, input: CreateTurnRequest) {
     return this.request(`${this.baseUrl}/tasks/${encodeURIComponent(taskId)}/turns`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
-    }).then((response) => parsed(response, CreateTurnResponseSchema));
+    }).then((response) => parsed<CreateTurnResponse>(response));
+  }
+
+  createVoiceClientSecret() {
+    return this.request(`${this.baseUrl}/voice/client-secret`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+    }).then((response) => parsed<CreateVoiceClientSecretResponse>(response));
   }
 }
 
@@ -62,20 +67,23 @@ export class TaskSocketClient {
       (socketUrl) => new WebSocket(socketUrl),
   ) {}
 
-  connect() {
+  connect(): Promise<void> {
     this.close();
     const socket = this.createSocket(this.url);
     this.socket = socket;
-    socket.addEventListener("open", () => {
-      if (this.socket !== socket) return;
-      this.pending.forEach((command) => this.sendNow(command));
-    });
-    socket.addEventListener("message", (event) => {
-      const message = ServerMessageSchema.parse(JSON.parse(String((event as MessageEvent).data)));
-      if (message.type === "task.cancelled") this.pending.delete(message.commandId);
-      if (message.type === "approval.resolved") this.pending.delete(message.commandId);
-      if (this.socket !== socket) return;
-      this.listeners.forEach((listener) => listener(message));
+    return new Promise((resolve) => {
+      socket.addEventListener("open", () => {
+        if (this.socket !== socket) return;
+        this.pending.forEach((command) => this.sendNow(command));
+        resolve();
+      });
+      socket.addEventListener("message", (event) => {
+        if (this.socket !== socket) return;
+        const message = JSON.parse(String((event as MessageEvent).data)) as ServerMessage;
+        if (message.type === "task.cancelled") this.pending.delete(message.commandId);
+        if (message.type === "approval.resolved") this.pending.delete(message.commandId);
+        this.listeners.forEach((listener) => listener(message));
+      });
     });
   }
 
@@ -85,9 +93,8 @@ export class TaskSocketClient {
   }
 
   send(command: ClientMessage) {
-    const checked = ClientMessageSchema.parse(command);
-    if ("commandId" in checked) this.pending.set(checked.commandId, checked);
-    this.sendNow(checked);
+    if ("commandId" in command) this.pending.set(command.commandId, command);
+    this.sendNow(command);
   }
 
   close() {

@@ -1,9 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
 describe("voice-first home", () => {
+  afterEach(() => vi.unstubAllGlobals());
   it("puts every voice action before recent tasks", () => {
     render(<Home />);
 
@@ -19,7 +20,16 @@ describe("voice-first home", () => {
     });
   });
 
-  it("links start modes and recent tasks to their destinations", () => {
+  it("links start modes and live recent tasks to their destinations", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      tasks: [{
+        id: "checkout",
+        title: "Fix checkout regression",
+        status: "working",
+        createdAt: "2026-07-24T18:00:00.000Z",
+        updatedAt: "2026-07-24T19:58:00.000Z",
+      }],
+    }), { status: 200 })));
     render(<Home />);
 
     expect(screen.getByRole("link", { name: /push to talk/i })).toHaveAttribute(
@@ -27,7 +37,7 @@ describe("voice-first home", () => {
       "/tasks/new?mode=ptt",
     );
     const recent = screen.getByRole("navigation", { name: /recent tasks/i });
-    expect(within(recent).getByRole("link", { name: /fix checkout regression/i })).toHaveAttribute(
+    expect(await within(recent).findByRole("link", { name: /fix checkout regression/i })).toHaveAttribute(
       "href",
       "/tasks/checkout",
     );

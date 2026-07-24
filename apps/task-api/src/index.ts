@@ -18,3 +18,8 @@ export type {
   StartTurnResult,
   TaskOrchestratorDependencies,
 } from './task-orchestrator.js';
+export {
+  buildDemoTaskApi,
+  OpenAIVoiceClientSecretProvider,
+} from './server.js';
+export type { DemoAdapterOverrides } from './server.js';

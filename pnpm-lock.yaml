@@ -16,9 +16,21 @@ importers:
       '@fastify/websocket':
         specifier: ^11.3.0
         version: 11.3.0
+      '@voice-agent/coding-agent-codex':
+        specifier: workspace:*
+        version: link:../../packages/coding-agent-codex
       '@voice-agent/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@voice-agent/executive-openai':
+        specifier: workspace:*
+        version: link:../../packages/executive-openai
+      '@voice-agent/task-store-memory':
+        specifier: workspace:*
+        version: link:../../packages/task-store-memory
+      '@voice-agent/workspace-fixture':
+        specifier: workspace:*
+        version: link:../../packages/workspace-fixture
       fastify:
         specifier: ^5.10.0
         version: 5.10.0
@@ -26,9 +38,6 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
-      '@voice-agent/task-store-memory':
-        specifier: workspace:*
-        version: link:../../packages/task-store-memory
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(supports-color@7.2.0)
@@ -50,6 +59,9 @@ importers:
       '@voice-agent/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@voice-agent/voice-openai':
+        specifier: workspace:*
+        version: link:../../packages/voice-openai
       next:
         specifier: ^16.2.11
         version: 16.2.11(@babel/core@7.29.7(supports-color@7.2.0))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

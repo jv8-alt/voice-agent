@@ -1,30 +1,9 @@
+"use client";
+
 import type { TaskView } from "@voice-agent/contracts";
 import Link from "next/link";
-import React from "react";
-
-export const recentTasks = [
-  {
-    id: "checkout",
-    title: "Fix checkout regression",
-    status: "needs_input",
-    createdAt: "2026-07-24T18:00:00.000Z",
-    updatedAt: "2026-07-24T19:58:00.000Z",
-  },
-  {
-    id: "launch-brief",
-    title: "Prepare Q3 launch brief",
-    status: "working",
-    createdAt: "2026-07-24T17:00:00.000Z",
-    updatedAt: "2026-07-24T19:52:00.000Z",
-  },
-  {
-    id: "analytics",
-    title: "Update analytics dashboard",
-    status: "completed",
-    createdAt: "2026-07-24T15:00:00.000Z",
-    updatedAt: "2026-07-24T19:00:00.000Z",
-  },
-] satisfies TaskView[];
+import React, { useEffect, useState } from "react";
+import { TaskRestClient } from "../lib/task-client";
 
 const labels: Record<TaskView["status"], string> = {
   queued: "Queued",
@@ -36,6 +15,11 @@ const labels: Record<TaskView["status"], string> = {
 };
 
 export default function Home() {
+  const [recentTasks, setRecentTasks] = useState<TaskView[]>([]);
+  useEffect(() => {
+    const client = new TaskRestClient(process.env.NEXT_PUBLIC_TASK_API_URL ?? "http://localhost:3001");
+    void client.list().then(({ tasks }) => setRecentTasks(tasks)).catch(() => {});
+  }, []);
   return (
     <main className="home-shell">
       <header className="home-header">
@@ -69,12 +53,11 @@ export default function Home() {
               <strong>{task.title}</strong>
               <span className="task-meta">
                 <span><i className={`dot ${task.status}`} />{labels[task.status]}</span>
-                <time dateTime={task.updatedAt}>
-                  {task.id === "analytics" ? "1h" : task.id === "launch-brief" ? "8m" : "2m"}
-                </time>
+                <time dateTime={task.updatedAt}>{new Date(task.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
               </span>
             </Link>
           ))}
+          {recentTasks.length === 0 && <p className="empty-tasks">No tasks yet. Start with your voice.</p>}
         </nav>
       </section>
     </main>
