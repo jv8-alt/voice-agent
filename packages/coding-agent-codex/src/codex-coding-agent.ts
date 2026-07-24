@@ -8,6 +8,7 @@ import {
 import {
   dependencyUnavailableError,
   invalidInputError,
+  TaskError,
   type CodingAgent,
   type CodingEvent,
   type PlanInput,
@@ -140,6 +141,13 @@ function dependencyFailure(message: string): CodingEvent {
   };
 }
 
+function failureFromCaught(error: unknown): CodingEvent {
+  if (error instanceof TaskError) {
+    return { type: 'failed', error: error.toProblem() };
+  }
+  return dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+}
+
 /**
  * Normalizes the Codex SDK stream while enforcing the read-only planning and
  * workspace-write execution split required by the CodingAgent port.
@@ -160,7 +168,7 @@ export class CodexCodingAgent implements CodingAgent {
       thread = this.#client.startThread(threadOptions(input.workspace.rootPath, 'read-only'));
     } catch (error) {
       if (input.signal.aborted) return;
-      yield dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+      yield failureFromCaught(error);
       return;
     }
 
@@ -185,7 +193,7 @@ export class CodexCodingAgent implements CodingAgent {
       );
     } catch (error) {
       if (input.signal.aborted) return;
-      yield dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+      yield failureFromCaught(error);
       return;
     }
     yield* this.#stream(
@@ -208,7 +216,7 @@ export class CodexCodingAgent implements CodingAgent {
       );
     } catch (error) {
       if (input.signal.aborted) return;
-      yield dependencyFailure(error instanceof Error ? error.message : 'Codex is unavailable');
+      yield failureFromCaught(error);
       return;
     }
     yield* this.#stream(
