@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run"
@@ -20,12 +21,15 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/websocket": "^11.3.0",
+    "@voice-agent/coding-agent-codex": "workspace:*",
     "@voice-agent/contracts": "workspace:*",
+    "@voice-agent/executive-openai": "workspace:*",
+    "@voice-agent/task-store-memory": "workspace:*",
+    "@voice-agent/workspace-fixture": "workspace:*",
     "fastify": "^5.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
-    "@voice-agent/task-store-memory": "workspace:*",
     "eslint": "^9.39.5",
     "tsx": "^4.23.1",
     "typescript": "^5.9.3",

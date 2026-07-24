@@ -6,14 +6,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "build": "next build --webpack",
+    "dev": "next dev --webpack",
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@voice-agent/contracts": "workspace:*",
+    "@voice-agent/voice-openai": "workspace:*",
     "next": "^16.2.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
