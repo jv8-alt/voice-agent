@@ -14,9 +14,24 @@ import {
 const execFileAsync = promisify(execFile);
 const planResponse = JSON.stringify({
   actions: [
-    { kind: 'read', summary: 'Inspect the greeting implementation', paths: ['src/greeting.js'] },
-    { kind: 'write', summary: 'Update the greeting implementation', paths: ['src/greeting.js'] },
-    { kind: 'exec', summary: 'Run the fixture tests', command: 'npm test' },
+    {
+      kind: 'read',
+      summary: 'Inspect the greeting implementation',
+      paths: ['src/greeting.js'],
+      command: null,
+    },
+    {
+      kind: 'write',
+      summary: 'Update the greeting implementation',
+      paths: ['src/greeting.js'],
+      command: null,
+    },
+    {
+      kind: 'exec',
+      summary: 'Run the fixture tests',
+      paths: null,
+      command: 'npm test',
+    },
   ],
 });
 
