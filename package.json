@@ -1,0 +1,15 @@
+{
+  "name": "voice-agent",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "dev": "pnpm -r --parallel --if-present dev",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck"
+  }
+}
