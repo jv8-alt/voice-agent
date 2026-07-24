@@ -318,7 +318,7 @@ flowchart BT
 | T12 | done (direct merge) | Shared A-E workspace manifests, dependency policy, and lockfile | Done when every branch dependency resolves from one frozen lockfile and the workspace check passes before branch restart | low | 220 |
 | A1 | done ([PR #4](https://github.com/jv8-alt/voice-agent/pull/4)) | `apps/web`: Next.js voice-first home and recent tasks | Done when mobile tests show voice actions before recent tasks and navigation works | medium | 350 |
 | A2 | done ([PR #7](https://github.com/jv8-alt/voice-agent/pull/7)) | `apps/web`: thread, auto-submit voice controls, cancel/approval, basic typing | Done when component tests cover immediate voice submission, working, cancel, approval, and outcomes | medium | 400 |
-| A3 | pending | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
+| A3 | done ([PR #10](https://github.com/jv8-alt/voice-agent/pull/10)) | `apps/web`: typed REST/WebSocket client and reducer | Done when replayed events reconstruct state and commands retry idempotently | high | 380 |
 | B1 | pending | `apps/task-api`: Fastify shell, config, errors, DI seams | Done when injection tests verify health and every pinned HTTP error | low | 300 |
 | B2 | pending | `packages/task-store-memory`: state, replay, active-run registry | Done when conformance covers overlap, replay, command retry, and abort cleanup | medium | 380 |
 | C1 | pending | `fixtures` and `packages/workspace-fixture`: isolated fixture leases | Done when tests prove source immutability, task isolation, and path containment | high | 350 |
