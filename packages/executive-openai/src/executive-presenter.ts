@@ -71,6 +71,24 @@ function outcomeCandidate(events: readonly CodingEvent[]): string | undefined {
   return undefined;
 }
 
+function fallbackOutcome(status: TurnStatus, outcome: string | undefined): OutcomeSummary {
+  if (
+    !outcome ||
+    /(?:sk-[a-z0-9_-]{8,}|api[_ -]?key|password|token\s*[:=]|begin [a-z ]*private key)/i.test(outcome)
+  ) {
+    return { headline: FALLBACK_HEADLINE[status] };
+  }
+  const text = outcome.replace(/[`*_#]/g, '').replace(/\s+/g, ' ').trim();
+  if (!text) return { headline: FALLBACK_HEADLINE[status] };
+  if (text.length <= 80) return { headline: text };
+
+  const headlineEnd = text.lastIndexOf(' ', 80);
+  const safeEnd = headlineEnd > 30 ? headlineEnd : 80;
+  const headline = text.slice(0, safeEnd).replace(/[,:;]$/, '');
+  const detail = text.slice(safeEnd).trim().slice(0, 180);
+  return { headline, ...(detail ? { detail } : {}) };
+}
+
 function privateStrings(events: readonly CodingEvent[]): string[] {
   const values: string[] = [];
   for (const event of events) {
@@ -112,6 +130,7 @@ export class OpenAIExecutivePresenter implements ExecutivePresenter {
     const facts = eventFacts(input.events);
     const outcome = outcomeCandidate(input.events);
     let generated: OutcomeSummary;
+    let generatedByModel = true;
     try {
       generated = await this.model.summarize({
         status: input.status,
@@ -122,9 +141,10 @@ export class OpenAIExecutivePresenter implements ExecutivePresenter {
         ...(outcome === undefined ? {} : { outcome }),
       });
     } catch {
-      generated = { headline: FALLBACK_HEADLINE[input.status] };
+      generatedByModel = false;
+      generated = fallbackOutcome(input.status, outcome);
     }
-    const summary = containsPrivateText(generated, input.events)
+    const summary = generatedByModel && containsPrivateText(generated, input.events)
       ? { headline: FALLBACK_HEADLINE[input.status] }
       : generated;
     const createdAt = this.now().toISOString();

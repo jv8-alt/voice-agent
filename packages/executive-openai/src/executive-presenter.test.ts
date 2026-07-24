@@ -87,7 +87,7 @@ describe('OpenAIExecutivePresenter', () => {
     expect(JSON.stringify(result.update)).not.toMatch(/raw_log_token|raw tool output/i);
   });
 
-  it('keeps completed work completed when the summary model is unavailable', async () => {
+  it('uses the completed answer when the summary model is unavailable', async () => {
     const presenter = new OpenAIExecutivePresenter({
       summarize: vi.fn().mockRejectedValue(new Error('Summary model unavailable')),
     });
@@ -100,8 +100,26 @@ describe('OpenAIExecutivePresenter', () => {
 
     expect(result.update).toMatchObject({
       phase: 'completed',
+      headline: 'Answered the follow-up.',
+    });
+  });
+
+  it('does not expose a secret-like completed answer when the summary model is unavailable', async () => {
+    const presenter = new OpenAIExecutivePresenter({
+      summarize: vi.fn().mockRejectedValue(new Error('Summary model unavailable')),
+    });
+    const result = await presenter.summarizeOutcome({
+      taskId: 'task-1',
+      turnId: 'turn-1',
+      status: 'completed',
+      events: [{ type: 'completed', summary: 'The API key is sk-private-value-do-not-expose' }],
+    });
+
+    expect(result.update).toMatchObject({
+      phase: 'completed',
       headline: 'Your task is complete',
     });
+    expect(JSON.stringify(result.update)).not.toContain('sk-private');
   });
 
   it('uses fixed, non-technical progress language', async () => {
