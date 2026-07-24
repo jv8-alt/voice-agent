@@ -109,10 +109,31 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
   const spokenUpdate = useRef<string | null>(null);
   const voiceConnect = useRef<Promise<boolean> | null>(null);
   const voiceReadyRef = useRef(false);
+  const voiceGeneration = useRef(0);
 
   useEffect(() => {
     let active = true;
-    socketReady.current = services.socket.connect();
+    let socketStarted = false;
+    let resolveSocketReady = () => {};
+    const ready = new Promise<void>((resolve) => {
+      resolveSocketReady = resolve;
+    });
+    socketReady.current = ready;
+    const connectTimer = window.setTimeout(() => {
+      if (!active) {
+        resolveSocketReady();
+        return;
+      }
+      socketStarted = true;
+      void services.socket.connect()
+        .then(resolveSocketReady)
+        .catch((cause: unknown) => {
+          resolveSocketReady();
+          if (active) {
+            setError(cause instanceof Error ? cause.message : "Unable to connect to task updates.");
+          }
+        });
+    }, 0);
     const unsubscribe = services.socket.subscribe((message) => {
       if (active) setState((current) => reduceTaskMessage(current, message));
     });
@@ -121,8 +142,14 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
         .then(async (envelope) => {
           if (!active) return;
           setState({ envelope, needsResync: false, error: null });
-          await socketReady.current;
-          services.socket.send({ type: "task.subscribe", taskId, afterEventId: envelope.lastEventId });
+          await ready;
+          if (active) {
+            services.socket.send({
+              type: "task.subscribe",
+              taskId,
+              afterEventId: envelope.lastEventId,
+            });
+          }
         })
         .catch((cause: unknown) => {
           if (active) setError(cause instanceof Error ? cause.message : "Unable to load task.");
@@ -130,8 +157,13 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     }
     return () => {
       active = false;
+      window.clearTimeout(connectTimer);
+      resolveSocketReady();
       unsubscribe();
-      services.socket.close();
+      if (socketStarted) services.socket.close();
+      voiceGeneration.current += 1;
+      voiceConnect.current = null;
+      voiceReadyRef.current = false;
       void services.voice.disconnect();
     };
   }, [services, taskId]);
@@ -148,25 +180,30 @@ export function TaskExperience({ taskId, initialMode, dependencies }: TaskExperi
     if (voiceReadyRef.current) return true;
     if (voiceConnect.current) return voiceConnect.current;
 
+    const generation = ++voiceGeneration.current;
     setVoiceBusy(true);
     setVoiceHint("Waiting for microphone permission…");
     const pending = (async () => {
       try {
         const { clientSecret } = await services.rest.createVoiceClientSecret();
         await services.voice.connect({ clientSecret });
+        if (voiceGeneration.current !== generation) return false;
         voiceReadyRef.current = true;
         setVoiceReady(true);
         setVoiceHint(null);
         setError(null);
         return true;
       } catch (cause) {
+        if (voiceGeneration.current !== generation) return false;
         voiceReadyRef.current = false;
         setVoiceReady(false);
         setVoiceHint(voiceFailureMessage(cause));
         return false;
       } finally {
-        voiceConnect.current = null;
-        setVoiceBusy(false);
+        if (voiceGeneration.current === generation) {
+          voiceConnect.current = null;
+          setVoiceBusy(false);
+        }
       }
     })();
     voiceConnect.current = pending;

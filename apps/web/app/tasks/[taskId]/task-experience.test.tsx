@@ -158,6 +158,26 @@ describe("mobile golden paths", () => {
     expect(test.sent.at(-1)).toHaveProperty("commandId");
   });
 
+  it("opens and subscribes one task socket under React Strict Mode", async () => {
+    const test = setup();
+    render(
+      <React.StrictMode>
+        <TaskExperience
+          taskId="task-1"
+          initialMode="typing"
+          dependencies={test.dependencies}
+        />
+      </React.StrictMode>,
+    );
+
+    await waitFor(() => expect(test.socket.connect).toHaveBeenCalledOnce());
+    await waitFor(() => expect(test.sent).toContainEqual({
+      type: "task.subscribe",
+      taskId: "task-1",
+      afterEventId: "3",
+    }));
+  });
+
   it("resolves a sensitive approval over the task socket", async () => {
     const test = setup(envelope("needs_input"));
     render(<TaskExperience taskId="task-1" initialMode="handsfree" dependencies={test.dependencies} />);
