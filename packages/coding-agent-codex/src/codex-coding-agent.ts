@@ -142,6 +142,9 @@ function itemOk(item: Extract<ThreadEvent, { type: 'item.completed' }>['item']):
   if ('exit_code' in item && typeof item.exit_code === 'number' && item.exit_code !== 0) {
     return false;
   }
+  if ('error' in item && item.error != null) {
+    return false;
+  }
   return true;
 }
 
@@ -246,6 +249,7 @@ export class CodexCodingAgent implements CodingAgent {
   ): AsyncIterable<CodingEvent> {
     let finalResponse = '';
     let sawFailedTool = false;
+    let sawTerminal = false;
     try {
       const turn = await thread.runStreamed(
         prompt,
@@ -264,8 +268,16 @@ export class CodexCodingAgent implements CodingAgent {
           }
         } else if (event.type === 'item.completed') {
           if (event.item.type === 'agent_message') {
-            finalResponse = event.item.text;
-            if (mode === 'execute') {
+            if (mode === 'plan') {
+              // Prefer schema-shaped plan JSON; later commentary must not clobber it.
+              try {
+                parsePlan(event.item.text);
+                finalResponse = event.item.text;
+              } catch {
+                // Ignore non-plan agent messages during planning.
+              }
+            } else {
+              finalResponse = event.item.text;
               yield { type: 'message', text: event.item.text };
             }
           } else {
@@ -279,6 +291,7 @@ export class CodexCodingAgent implements CodingAgent {
             }
           }
         } else if (event.type === 'turn.completed') {
+          sawTerminal = true;
           if (mode === 'plan') {
             yield { type: 'plan_ready', actions: parsePlan(finalResponse) };
           } else if (sawFailedTool) {
@@ -291,9 +304,13 @@ export class CodexCodingAgent implements CodingAgent {
             yield { type: 'completed', summary: finalResponse || 'Codex completed the turn.' };
           }
         } else if (event.type === 'turn.failed' || event.type === 'error') {
+          sawTerminal = true;
           yield dependencyFailure(event.type === 'turn.failed' ? event.error.message : event.message);
           return;
         }
+      }
+      if (!signal.aborted && !sawTerminal) {
+        yield dependencyFailure('Codex ended the stream without completing the turn');
       }
     } catch (error) {
       if (signal.aborted) {
